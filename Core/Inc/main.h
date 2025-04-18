@@ -57,6 +57,16 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define LED_Pin GPIO_PIN_13
+#define LED_GPIO_Port GPIOC
+#define TFT_RES_Pin GPIO_PIN_5
+#define TFT_RES_GPIO_Port GPIOB
+#define TFT_DC_Pin GPIO_PIN_6
+#define TFT_DC_GPIO_Port GPIOB
+#define TFT_CS_Pin GPIO_PIN_7
+#define TFT_CS_GPIO_Port GPIOB
+#define TFT_BL_Pin GPIO_PIN_8
+#define TFT_BL_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
