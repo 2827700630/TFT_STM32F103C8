@@ -91,9 +91,9 @@ int main(void)
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
   TFT_Init_ST7735R(); // LCD初始化，请看此函数注释
-  //LCD_TFT_Init(); // TFT初始化
+  // TFT_Init_Generic(); // TFT初始化
   // LCD_Fill(0,0,128,160,WHITE);//白色背景
-  TFT_Fill_Area(0, 0, 128, 160, BLUE); // 蓝色背景
+  TFT_Fill_Area(0, 0, 300, 300, BLUE); // 蓝色背景
   /* USER CODE END 2 */
 
   /* Infinite loop */
