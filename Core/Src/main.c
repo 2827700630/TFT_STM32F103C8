@@ -23,8 +23,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "TFT/lcd.h"
-#include "TFT/lcd_init.h"
+#include "TFT/TFT.h"
+#include "TFT/TFT_init.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -90,10 +90,10 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
-  LCD_Init_ST7735R(); // LCD初始化，请看此函数注释
+  TFT_Init_ST7735R(); // LCD初始化，请看此函数注释
   //LCD_TFT_Init(); // TFT初始化
   // LCD_Fill(0,0,128,160,WHITE);//白色背景
-  LCD_Fill_Area(0, 0, 128, 160, BLUE); // 蓝色背景
+  TFT_Fill_Area(0, 0, 128, 160, BLUE); // 蓝色背景
   /* USER CODE END 2 */
 
   /* Infinite loop */

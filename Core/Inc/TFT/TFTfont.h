@@ -1,5 +1,5 @@
-#ifndef __LCDFONT_H
-#define __LCDFONT_H 	   
+#ifndef __TFTFONT_H
+#define __TFTFONT_H 	   
 
 
 const unsigned char ascii_1608[][16]={

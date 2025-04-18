@@ -1,10 +1,11 @@
-#ifndef __LCD_H
-#define __LCD_H
+#ifndef __TFT_H__
+#define __TFT_H__
 
 #include "main.h"
-#include "lcd_init.h" // 包含lcd_init.h以使用u8/u16/u32类型定义和颜色定义
+#include "TFT/TFT_init.h" // 包含lcd_init.h以使用颜色定义
+#include <stdint.h>
 
-//----------------- LCD 绘图函数声明 -----------------
+//----------------- TFT 绘图函数声明 -----------------
 
 /**
  * @brief  在指定区域填充单色
@@ -15,7 +16,7 @@
  * @param  color   要填充的颜色 (RGB565格式)
  * @retval 无
  */
-void LCD_Fill_Area(u16 x_start, u16 y_start, u16 x_end, u16 y_end, u16 color);
+void TFT_Fill_Area(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end, uint16_t color);
 
 /**
  * @brief  在指定坐标绘制一个点
@@ -24,7 +25,7 @@ void LCD_Fill_Area(u16 x_start, u16 y_start, u16 x_end, u16 y_end, u16 color);
  * @param  color 点的颜色 (RGB565格式)
  * @retval 无
  */
-void LCD_Draw_Point(u16 x, u16 y, u16 color);
+void TFT_Draw_Point(uint16_t x, uint16_t y, uint16_t color);
 
 /**
  * @brief  绘制一条直线
@@ -35,7 +36,7 @@ void LCD_Draw_Point(u16 x, u16 y, u16 color);
  * @param  color 线的颜色 (RGB565格式)
  * @retval 无
  */
-void LCD_Draw_Line(u16 x1, u16 y1, u16 x2, u16 y2, u16 color);
+void TFT_Draw_Line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);
 
 /**
  * @brief  绘制一个空心矩形
@@ -46,7 +47,7 @@ void LCD_Draw_Line(u16 x1, u16 y1, u16 x2, u16 y2, u16 color);
  * @param  color 矩形边框颜色 (RGB565格式)
  * @retval 无
  */
-void LCD_Draw_Rectangle(u16 x1, u16 y1, u16 x2, u16 y2, u16 color);
+void TFT_Draw_Rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);
 
 /**
  * @brief  绘制一个圆
@@ -56,9 +57,9 @@ void LCD_Draw_Rectangle(u16 x1, u16 y1, u16 x2, u16 y2, u16 color);
  * @param  color 圆的颜色 (RGB565格式)
  * @retval 无
  */
-void LCD_Draw_Circle(u16 x0, u16 y0, u8 r, u16 color);
+void TFT_Draw_Circle(uint16_t x0, uint16_t y0, uint8_t r, uint16_t color);
 
-//----------------- LCD 字符/字符串/数字 显示函数声明 -----------------
+//----------------- TFT 字符/字符串/数字 显示函数声明 -----------------
 
 /**
  * @brief  显示一个中文字符串 (自动根据字号调用相应函数)
@@ -71,7 +72,7 @@ void LCD_Draw_Circle(u16 x0, u16 y0, u8 r, u16 color);
  * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
  * @retval 无
  */
-void LCD_Show_Chinese_String(u16 x, u16 y, u8 *str, u16 fg_color, u16 bg_color, u8 font_size, u8 mode);
+void TFT_Show_Chinese_String(uint16_t x, uint16_t y, uint8_t *str, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode);
 
 /**
  * @brief  显示一个16x16的汉字
@@ -84,7 +85,7 @@ void LCD_Show_Chinese_String(u16 x, u16 y, u8 *str, u16 fg_color, u16 bg_color, 
  * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
  * @retval 无
  */
-void LCD_Show_Chinese_16x16(u16 x, u16 y, u8 *hz_ptr, u16 fg_color, u16 bg_color, u8 font_size, u8 mode);
+void TFT_Show_Chinese_16x16(uint16_t x, uint16_t y, uint8_t *hz_ptr, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode);
 
 /**
  * @brief  显示一个24x24的汉字
@@ -97,7 +98,7 @@ void LCD_Show_Chinese_16x16(u16 x, u16 y, u8 *hz_ptr, u16 fg_color, u16 bg_color
  * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
  * @retval 无
  */
-void LCD_Show_Chinese_24x24(u16 x, u16 y, u8 *hz_ptr, u16 fg_color, u16 bg_color, u8 font_size, u8 mode);
+void TFT_Show_Chinese_24x24(uint16_t x, uint16_t y, uint8_t *hz_ptr, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode);
 
 /**
  * @brief  显示一个32x32的汉字
@@ -110,7 +111,7 @@ void LCD_Show_Chinese_24x24(u16 x, u16 y, u8 *hz_ptr, u16 fg_color, u16 bg_color
  * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
  * @retval 无
  */
-void LCD_Show_Chinese_32x32(u16 x, u16 y, u8 *hz_ptr, u16 fg_color, u16 bg_color, u8 font_size, u8 mode);
+void TFT_Show_Chinese_32x32(uint16_t x, uint16_t y, uint8_t *hz_ptr, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode);
 
 /**
  * @brief  显示一个ASCII字符
@@ -123,7 +124,7 @@ void LCD_Show_Chinese_32x32(u16 x, u16 y, u8 *hz_ptr, u16 fg_color, u16 bg_color
  * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
  * @retval 无
  */
-void LCD_Show_Char(u16 x, u16 y, u8 ascii_char, u16 fg_color, u16 bg_color, u8 font_size, u8 mode);
+void TFT_Show_Char(uint16_t x, uint16_t y, uint8_t ascii_char, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode);
 
 /**
  * @brief  显示一个ASCII字符串
@@ -136,15 +137,15 @@ void LCD_Show_Char(u16 x, u16 y, u8 ascii_char, u16 fg_color, u16 bg_color, u8 f
  * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
  * @retval 无
  */
-void LCD_Show_String(u16 x, u16 y, const u8 *str, u16 fg_color, u16 bg_color, u8 font_size, u8 mode);
+void TFT_Show_String(uint16_t x, uint16_t y, const uint8_t *str, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode);
 
 /**
  * @brief  计算m的n次方
  * @param  m 底数
  * @param  n 指数
- * @retval u32 计算结果
+ * @retval uint32_t 计算结果
  */
-u32 LCD_Pow(u8 m, u8 n);
+uint32_t TFT_Pow(uint8_t m, uint8_t n);
 
 /**
  * @brief  显示一个无符号整型数字
@@ -158,7 +159,7 @@ u32 LCD_Pow(u8 m, u8 n);
  * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
  * @retval 无
  */
-void LCD_Show_Int_Num(u16 x, u16 y, u16 num, u8 len, u16 fg_color, u16 bg_color, u8 font_size, u8 mode);
+void TFT_Show_Int_Num(uint16_t x, uint16_t y, uint16_t num, uint8_t len, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode);
 
 /**
  * @brief  显示一个浮点数 (保留两位小数)
@@ -172,9 +173,9 @@ void LCD_Show_Int_Num(u16 x, u16 y, u16 num, u8 len, u16 fg_color, u16 bg_color,
  * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
  * @retval 无
  */
-void LCD_Show_Float_Num(u16 x, u16 y, float num, u8 len, u16 fg_color, u16 bg_color, u8 font_size, u8 mode);
+void TFT_Show_Float_Num(uint16_t x, uint16_t y, float num, uint8_t len, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode);
 
-//----------------- LCD 图片显示函数声明 -----------------
+//----------------- TFT 图片显示函数声明 -----------------
 
 /**
  * @brief  显示一幅存储在Flash中的图片
@@ -186,6 +187,6 @@ void LCD_Show_Float_Num(u16 x, u16 y, float num, u8 len, u16 fg_color, u16 bg_co
  * @retval 无
  * @note   图片数据需要预先使用取模软件生成
  */
-void LCD_Show_Picture(u16 x, u16 y, u16 width, u16 height, const u8 pic_ptr[]);
+void TFT_Show_Picture(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t pic_ptr[]);
 
 #endif
