@@ -26,7 +26,8 @@
 /* USER CODE BEGIN Includes */
 #include "TFTh/TFT.h"
 #include "TFTh/TFT_init.h"
-#include <stdio.h> // 添加 stdio.h 用于 sprintf
+#include <stdio.h>  // 添加 stdio.h 用于 sprintf
+#include <stdlib.h> // 添加 stdlib.h 用于 rand()
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,11 +48,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint32_t total_frames = 0;    // 总帧数
-uint32_t test_start_tick = 0; // 测试开始时间
-uint8_t test_running = 1;     // 测试运行状态标志 (1: running, 0: stopped)
+uint32_t frame_count = 0;
+uint32_t start_tick = 0;
 float fps = 0.0f;
-char fps_str[30]; // 用于存储最终 FPS 字符串 (可能需要更长)
+char fps_str[20]; // 用于显示 FPS
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -97,57 +97,89 @@ int main(void)
   MX_DMA_Init();
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
-  // TFT_Init_ST7735R(&hspi1); // LCD初始化，请看此函数注释 (示例：如果使用 ST7735R)
   TFT_Init_ST7735(&hspi1);              // TFT初始化, 传入 SPI1 句柄
-  TFT_Fill_Area(0, 0, 128, 160, BLACK); // 黑色背景 (调整为常用尺寸)
+  TFT_Fill_Area(0, 0, 128, 160, BLACK); // 清屏为黑色背景
 
-  test_start_tick = HAL_GetTick();         // 记录测试开始时间
-  test_running = 1;                        // 开始测试
-  TFT_Fill_Circle(64, 80, 30, BLUE);       // 绘制一个蓝色圆形，圆心在(64, 80)，半径为30
-  TFT_Draw_Rectangle(10, 10, 50, 50, RED); // 绘制一个红色矩形，左上角在(10, 10)，右下角在(50, 50)
+  start_tick = HAL_GetTick(); // 获取开始时间
+  frame_count = 0;
+
+  // 动画变量初始化
+  int16_t rect_x = 10;
+  int16_t rect_y = 10;
+  int16_t rect_w = 30;
+  int16_t rect_h = 20;
+  int16_t rect_dx = 2; // X方向速度
+  int16_t rect_dy = 1; // Y方向速度
+
+  uint8_t circle_r = 10;
+  uint8_t circle_r_dir = 1; // 半径变化方向
+
+  uint16_t current_color = RED;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    // 1. 清屏 (或只清除需要更新的区域以提高效率)
+    TFT_Fill_Area(0, 0, 128, 160, BLACK);
 
-    TFT_Fill_Circle(64, 80, 30, BLUE);           // 绘制一个蓝色圆形，圆心在(64, 80)，半径为30
-    HAL_Delay(1000);                             // 延时 1000ms
-    TFT_Fill_Rectangle(60, 20, 128, 160, GREEN); // 填充绿色矩形，覆盖整个屏幕
-    HAL_Delay(1000);                             // 延时 1000ms
-    // if (test_running)
-    // {
-    //   HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin); // 翻转 LED 引脚的状态
+    // 2. 更新动画状态
+    // 移动矩形
+    rect_x += rect_dx;
+    rect_y += rect_dy;
 
-    //   // 三原色刷屏测试 (作为帧率测试负载)
-    //   TFT_Fill_Area(0, 0, 128, 160, BLUE);
-    //   TFT_Fill_Area(0, 0, 128, 160, GREEN);
-    //   TFT_Fill_Area(0, 0, 128, 160, RED);
+    // 边界碰撞检测
+    if (rect_x <= 0 || rect_x + rect_w >= 128)
+    {
+      rect_dx = -rect_dx; // X方向反向
+      rect_x += rect_dx;  // 调整位置防止卡住
+    }
+    if (rect_y <= 0 || rect_y + rect_h >= 160)
+    {
+      rect_dy = -rect_dy; // Y方向反向
+      rect_y += rect_dy;  // 调整位置防止卡住
+    }
 
-    //   total_frames += 3; // 每次循环绘制了 3 帧 (蓝、绿、红)
+    // 变化圆半径
+    if (circle_r_dir)
+    {
+      circle_r++;
+      if (circle_r >= 30)
+        circle_r_dir = 0;
+    }
+    else
+    {
+      circle_r--;
+      if (circle_r <= 5)
+        circle_r_dir = 1;
+    }
 
-    //   // 检查测试时间是否达到 10 秒
-    //   if (HAL_GetTick() - test_start_tick >= 10000)
-    //   {
-    //     test_running = 0; // 停止测试
+    // 变化颜色 (简单示例：在几种颜色间切换)
+    current_color = (uint16_t)rand(); // 随机颜色，或者使用更平滑的过渡
 
-    //     // 计算最终平均 FPS
-    //     uint32_t elapsed_time = HAL_GetTick() - test_start_tick; // 获取精确的经过时间
-    //     fps = (float)total_frames * 1000.0f / (float)elapsed_time; // 使用实际经过时间计算，更精确
+    // 3. 绘制图形
+    TFT_Fill_Rectangle(rect_x, rect_y, rect_x + rect_w - 1, rect_y + rect_h - 1, BLUE);
+    TFT_Fill_Circle(64, 80, circle_r, current_color);
 
-    //     // 格式化最终 FPS 字符串并显示
-    //     sprintf(fps_str, "FPS: %.1f", fps);
-    //     TFT_Fill_Area(0, 0, 128, 160, BLACK); // 清屏为黑色背景
-    //    // TFT_Show_String(5, 5, fps_str, WHITE, BLACK, 16, 0); // 在 (5, 5) 位置显示白色最终 FPS 字符串
-    //    // TFT_Show_String(5, 25, "Test Finished!", YELLOW, BLACK, 16, 0); // 显示测试完成信息
-    //   }
-    // }
-    // else
-    // {
-    //   // 测试已停止，可以进入低功耗模式或执行其他操作
-    //   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET); // 关闭 LED (假设低电平点亮)
-    // }
+    // 4. 帧率计算与显示 (可选，需要显示函数支持)
+    frame_count++;
+    uint32_t current_tick = HAL_GetTick();
+    uint32_t elapsed_time = current_tick - start_tick;
+    if (elapsed_time >= 1000) // 每秒更新一次 FPS
+    {
+      fps = (float)frame_count * 1000.0f / (float)elapsed_time;
+      sprintf(fps_str, "FPS:%.1f", fps);
+      // TFT_Show_String(5, 5, (uint8_t*)fps_str, WHITE, BLACK, 16, 0); // 需要 TFT_Show_String 函数
+      start_tick = current_tick;
+      frame_count = 0;
+    }
+
+    // 5. LED 闪烁与延时
+    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+    // HAL_Delay(10); // 可以添加少量延时来控制帧率，或移除以测试最大性能
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

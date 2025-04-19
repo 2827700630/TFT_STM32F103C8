@@ -18,7 +18,7 @@
  *
  * 该缓冲区用于存储绘图数据，确保足够的空间以支持图形显示。
  */
-#define TFT_BUFFER_SIZE 2048
+#define TFT_BUFFER_SIZE 4096
 /**
  * @brief 定义屏幕的显示方向 (重要配置)
  *
@@ -36,7 +36,16 @@
  * 4. 如果您的屏幕是其他型号 (如 ST7789, ILI9341), 您需要查阅其数据手册来确定正确的 MADCTL 值和偏移量，
  *    并在 TFT_init.c 和 TFT_io.c 中添加相应的初始化序列和地址设置逻辑。
  */
-#define DISPLAY_DIRECTION 5 // 移动到这里
+#define DISPLAY_DIRECTION 5 
+
+/*
+ * @brief 定义屏幕的 X 和 Y 偏移量 (像素)，用于调整显示区域
+ *
+ * 这些偏移量用于在设置地址时调整实际的显示区域。如果你的屏幕有偏移，修改这些值。
+ * 根据您的屏幕型号和连接方式进行相应的修改。
+ */
+#define TFT_X_OFFSET 2 // X轴偏移量 
+#define TFT_Y_OFFSET 1 // Y轴偏移量 
 
 /*
  * 常用颜色定义 (RGB565格式)
