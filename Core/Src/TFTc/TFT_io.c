@@ -7,8 +7,14 @@
 
 // 全局变量存储 SPI 句柄和 DMA 使用标志 (非 static)
 SPI_HandleTypeDef *TFT_spi = NULL;
-static uint8_t tft_use_dma = 0;				  // DMA 使用标志设为 static，仅在此文件内部访问
+static uint8_t tft_use_dma = 0;              // DMA 使用标志设为 static，仅在此文件内部访问
 static volatile uint8_t tft_spi_dma_busy = 0; // DMA 传输忙标志设为 static
+static uint8_t tft_init_mode = 1;            // 初始化模式标志，初始化时为1，正常操作为0
+
+// 缓冲区定义
+#define TFT_BUFFER_SIZE 256  // 缓冲区大小（128个像素，每个像素2字节）
+static uint8_t tft_buffer[TFT_BUFFER_SIZE];  // 全局缓冲区
+static uint16_t buffer_index = 0;            // 当前缓冲区索引
 
 //----------------- TFT 控制引脚函数实现 (TFT HAL specific) -----------------
 // 这些函数实现了硬件抽象层，将平台相关的GPIO操作封装起来，以便于在不同平台上使用相同的TFT驱动代码。
@@ -35,6 +41,83 @@ void TFT_Pin_BLK_Set(uint8_t state)
 //--------------------------------------------------------------------------
 
 /*
+ * @brief  使用SPI发送缓冲区数据到TFT
+ * @param  buffer 要发送的数据缓冲区
+ * @param  length 要发送的数据长度（字节数）
+ * @param  wait   是否等待传输完成
+ * @retval 无
+ */
+void TFT_SPI_Send(uint8_t* buffer, uint16_t length, uint8_t wait)
+{
+    if (TFT_spi == NULL || length == 0)
+        return;
+
+    TFT_Wait_DMA_Done(); // 等待上一次DMA传输完成
+    
+    TFT_Pin_DC_Set(1);   // 数据模式
+    TFT_Pin_CS_Set(0);   // 片选选中
+
+    if (tft_use_dma && !tft_init_mode) // 仅在非初始化模式且DMA可用时使用DMA
+    {
+        tft_spi_dma_busy = 1;  // 设置忙标志
+        HAL_SPI_Transmit_DMA(TFT_spi, buffer, length);
+        // CS在回调中拉高，除非wait=1
+        if (wait)
+        {
+            TFT_Wait_DMA_Done();
+            TFT_Pin_CS_Set(1);  // 传输完成后拉高CS
+        }
+    }
+    else
+    {
+        HAL_SPI_Transmit(TFT_spi, buffer, length, 100);
+        TFT_Pin_CS_Set(1);      // 非DMA模式，传输完成后立即拉高CS
+    }
+}
+
+/*
+ * @brief  向缓冲区添加16位数据
+ * @param  data 要添加的16位数据
+ * @retval 无
+ * @note   如果缓冲区已满，会自动发送并清空缓冲区
+ */
+void TFT_Buffer_Write16(uint16_t data)
+{
+    // 如果缓冲区已满，先发送缓冲区内容
+    if (buffer_index >= TFT_BUFFER_SIZE - 1)
+    {
+        TFT_Flush_Buffer(0); // 发送但不等待完成
+    }
+    
+    // 添加数据到缓冲区
+    tft_buffer[buffer_index++] = (data >> 8) & 0xFF; // 高字节
+    tft_buffer[buffer_index++] = data & 0xFF;        // 低字节
+}
+
+/*
+ * @brief  刷新缓冲区内容到TFT
+ * @param  wait 是否等待传输完成 (1=等待, 0=不等待)
+ * @retval 无
+ */
+void TFT_Flush_Buffer(uint8_t wait)
+{
+    if (buffer_index == 0)
+        return; // 缓冲区为空，无需刷新
+
+    TFT_SPI_Send(tft_buffer, buffer_index, wait);
+    buffer_index = 0; // 重置缓冲区索引
+}
+
+/*
+ * @brief  重置缓冲区（清空但不发送）
+ * @retval 无
+ */
+void TFT_Reset_Buffer(void)
+{
+    buffer_index = 0;
+}
+
+/*
  * @brief  初始化 TFT IO 层
  * @param  hspi 指向 SPI_HandleTypeDef 结构的指针
  * @retval 无
@@ -55,6 +138,17 @@ void TFT_IO_Init(SPI_HandleTypeDef *hspi)
 		tft_use_dma = 0; // SPI 未配置 DMA
 	}
 	tft_spi_dma_busy = 0; // 初始化 DMA 忙标志
+	tft_init_mode = 1;    // 默认为初始化模式
+}
+
+/*
+ * @brief  设置TFT驱动工作模式
+ * @param  mode 0=正常操作模式，可使用DMA, 1=初始化模式，强制使用阻塞传输
+ * @retval 无
+ */
+void TFT_Set_Mode(uint8_t mode)
+{
+	tft_init_mode = (mode != 0) ? 1 : 0;
 }
 
 /*
@@ -62,7 +156,7 @@ void TFT_IO_Init(SPI_HandleTypeDef *hspi)
  * @param  无
  * @retval 无
  */
-static void TFT_Wait_DMA_Done(void) // 设为 static，仅在此文件内使用
+ void TFT_Wait_DMA_Done(void) // 设为 static，仅在此文件内使用
 {
 	// 只有在 DMA 模式下才需要等待
 	if (tft_use_dma)
@@ -82,23 +176,24 @@ static void TFT_Wait_DMA_Done(void) // 设为 static，仅在此文件内使用
  */
 void TFT_Write_Data8(uint8_t data)
 {
-	if (TFT_spi == NULL)
-		return;			 // 检查句柄
-	TFT_Wait_DMA_Done(); // 等待上一次 DMA 完成
-	TFT_Pin_DC_Set(1);	 // 选择数据模式 (高)
-	TFT_Pin_CS_Set(0);	 // 片选选中 (低)
-
-	if (tft_use_dma)
-	{
-		tft_spi_dma_busy = 1; // 设置忙标志
-		HAL_SPI_Transmit_DMA(TFT_spi, &data, 1);
-		// 注意：CS 在回调中拉高
-	}
-	else
-	{
-		HAL_SPI_Transmit(TFT_spi, &data, 1, 100); // 增加超时时间
-		TFT_Pin_CS_Set(1);						  // 非DMA模式下，传输完成后立即拉高CS (高)
-	}
+    if (TFT_spi == NULL)
+        return;         // 检查句柄
+    
+    if (tft_init_mode) // 初始化模式下使用阻塞式传输
+    {
+        TFT_Wait_DMA_Done(); // 等待上一次DMA完成
+        TFT_Pin_DC_Set(1);   // 数据模式
+        TFT_Pin_CS_Set(0);   // 片选选中
+        
+        HAL_SPI_Transmit(TFT_spi, &data, 1, 100);
+        TFT_Pin_CS_Set(1);   // 传输完成后拉高CS
+    }
+    else // 正常模式下使用缓冲区
+    {
+        // 8位数据转为16位处理，高字节为0
+        uint16_t data16 = (uint16_t)data;
+        TFT_Buffer_Write16(data16);
+    }
 }
 
 /*
@@ -108,27 +203,26 @@ void TFT_Write_Data8(uint8_t data)
  */
 void TFT_Write_Data16(uint16_t data)
 {
-	if (TFT_spi == NULL)
-		return;			   // 检查句柄
-	TFT_Wait_DMA_Done();   // 等待上一次 DMA 完成
-	uint8_t buffer[2];	   // 局部变量
-	buffer[0] = data >> 8; // 高字节
-	buffer[1] = data;	   // 低字节
-
-	TFT_Pin_DC_Set(1); // 选择数据模式 (高)
-	TFT_Pin_CS_Set(0); // 片选选中 (低)
-
-	if (tft_use_dma)
-	{
-		tft_spi_dma_busy = 1; // 设置忙标志
-		HAL_SPI_Transmit_DMA(TFT_spi, buffer, 2);
-		// 注意：CS 在回调中拉高
-	}
-	else
-	{
-		HAL_SPI_Transmit(TFT_spi, buffer, 2, 100); // 增加超时时间
-		TFT_Pin_CS_Set(1);						   // 非DMA模式下，传输完成后立即拉高CS (高)
-	}
+    if (TFT_spi == NULL)
+        return;         // 检查句柄
+    
+    if (tft_init_mode) // 初始化模式下使用阻塞式传输
+    {
+        uint8_t buffer[2];
+        buffer[0] = (data >> 8) & 0xFF; // 高字节
+        buffer[1] = data & 0xFF;        // 低字节
+        
+        TFT_Wait_DMA_Done(); // 等待DMA完成
+        TFT_Pin_DC_Set(1);   // 数据模式
+        TFT_Pin_CS_Set(0);   // 片选选中
+        
+        HAL_SPI_Transmit(TFT_spi, buffer, 2, 100);
+        TFT_Pin_CS_Set(1);   // 传输完成后拉高CS
+    }
+    else // 正常模式下使用缓冲区
+    {
+        TFT_Buffer_Write16(data);
+    }
 }
 
 /*
@@ -138,14 +232,18 @@ void TFT_Write_Data16(uint16_t data)
  */
 void TFT_Write_Command(uint8_t command)
 {
-	if (TFT_spi == NULL)
-		return;			 // 检查句柄
-	TFT_Wait_DMA_Done(); // 等待上一次 DMA 完成
-	TFT_Pin_DC_Set(0);	 // 选择命令模式 (低)
-	TFT_Pin_CS_Set(0);	 // 片选选中 (低)
+    if (TFT_spi == NULL)
+        return;         // 检查句柄
+    
+    // 命令发送前先刷新缓冲区
+    TFT_Flush_Buffer(1);
+    
+    TFT_Wait_DMA_Done(); // 等待上一次DMA完成
+    TFT_Pin_DC_Set(0);   // 命令模式
+    TFT_Pin_CS_Set(0);   // 片选选中
 
-	HAL_SPI_Transmit(TFT_spi, &command, 1, 100); // 增加超时时间
-	TFT_Pin_CS_Set(1);							 // 命令发送完成后立即拉高CS (高)
+    HAL_SPI_Transmit(TFT_spi, &command, 1, 100); // 命令始终使用阻塞式传输
+    TFT_Pin_CS_Set(1);   // 命令发送完成后立即拉高CS
 }
 
 /*
@@ -158,6 +256,9 @@ void TFT_Write_Command(uint8_t command)
  */
 void TFT_Set_Address(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end)
 {
+    // 设置地址前先刷新缓冲区
+    TFT_Flush_Buffer(1);
+    
 	// 根据不同的显示方向调整坐标偏移量
 	// 这些偏移量是为了适配屏幕的物理像素排列和驱动IC的寻址方式
 #if DISPLAY_DIRECTION == 0	 // ST7735S 正常 (0度, 红板)

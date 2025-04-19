@@ -13,6 +13,9 @@
 void TFT_Init_ST7735(SPI_HandleTypeDef *hspi)
 {
 	TFT_IO_Init(hspi); // 初始化 IO 层，传递 SPI 句柄
+	
+	// 初始化阶段强制使用阻塞式传输
+	TFT_Set_Mode(1);
 
 	TFT_Pin_RES_Set(0); // 硬复位TFT (低)
 	HAL_Delay(100);
@@ -105,9 +108,9 @@ void TFT_Init_ST7735(SPI_HandleTypeDef *hspi)
 	TFT_Write_Data8(0x00); // MY=0, MX=0, MV=0, ML=0, RGB=0, MH=0
 #elif DISPLAY_DIRECTION == 5 // ST7735R 旋转180度 (黑板, RGB)
 	TFT_Write_Data8(0xC0); // MY=1, MX=1, MV=0, ML=0, RGB=0, MH=0
-						   // 注意: ST7735R 的 90/270 度旋转可能需要不同的 MADCTL 值，这里未列出
-						   // 例如 90度: 0x60 (MY=0,MX=1,MV=1,RGB=0)
-						   // 例如 270度: 0xA0 (MY=1,MX=0,MV=1,RGB=0)
+	// 注意: ST7735R 的 90/270 度旋转可能需要不同的 MADCTL 值，这里未列出
+	// 例如 90度: 0x60 (MY=0,MX=1,MV=1,RGB=0)
+	// 例如 270度: 0xA0 (MY=1,MX=0,MV=1,RGB=0)
 #else
 #error "Invalid DISPLAY_DIRECTION defined in TFT_io.h"
 #endif
@@ -161,6 +164,9 @@ void TFT_Init_ST7735(SPI_HandleTypeDef *hspi)
 	// 17. 开启显示 (Display ON)
 	TFT_Write_Command(0x29); // DISPON
 	HAL_Delay(100);
+
+	// 初始化完成，切换到正常工作模式，允许使用DMA传输
+	TFT_Set_Mode(0);
 
 	// 初始化完成后，可以设置一次全屏地址，但这通常由绘图函数处理
 	// TFT_Set_Address(0, 0, TFT_WIDTH - 1, TFT_HEIGHT - 1); // 假设定义了 TFT_WIDTH 和 TFT_HEIGHT

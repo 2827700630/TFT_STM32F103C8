@@ -80,6 +80,43 @@ void TFT_Pin_BLK_Set(uint8_t state);
 void TFT_IO_Init(SPI_HandleTypeDef *hspi);
 
 /**
+ * @brief  设置TFT驱动工作模式
+ * @param  mode 0=正常操作模式，可使用DMA, 1=初始化模式，强制使用阻塞传输
+ * @retval 无
+ */
+void TFT_Set_Mode(uint8_t mode);
+
+/**
+ * @brief  使用SPI发送缓冲区数据到TFT
+ * @param  buffer 要发送的数据缓冲区
+ * @param  length 要发送的数据长度（字节数）
+ * @param  wait   是否等待传输完成
+ * @retval 无
+ */
+void TFT_SPI_Send(uint8_t* buffer, uint16_t length, uint8_t wait);
+
+/**
+ * @brief  向缓冲区添加16位数据
+ * @param  data 要添加的16位数据
+ * @retval 无
+ * @note   如果缓冲区已满，会自动发送并清空缓冲区
+ */
+void TFT_Buffer_Write16(uint16_t data);
+
+/**
+ * @brief  刷新缓冲区内容到TFT
+ * @param  wait 是否等待传输完成 (1=等待, 0=不等待)
+ * @retval 无
+ */
+void TFT_Flush_Buffer(uint8_t wait);
+
+/**
+ * @brief  重置缓冲区（清空但不发送）
+ * @retval 无
+ */
+void TFT_Reset_Buffer(void);
+
+/**
  * @brief  向TFT写入8位数据
  * @param  data 要写入的8位数据
  * @retval 无
