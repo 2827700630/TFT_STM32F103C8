@@ -3,6 +3,7 @@
 
 #include "main.h"
 #include "TFTh/TFT_io.h" // 包含 TFT_io.h 以使用底层函数和颜色定义
+#include "TFTh/font.h"   // 包含字体和字符显示函数声明
 #include <stdint.h>
 
 //----------------- 点结构体定义 -----------------

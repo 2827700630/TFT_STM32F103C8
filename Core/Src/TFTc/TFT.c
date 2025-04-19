@@ -639,8 +639,8 @@ void TFT_Fill_Quarter_Circle(uint16_t centerX, uint16_t centerY, uint8_t radius,
 	}
 	if (cornerMask & 0x2) // 右下角
 	{
-		TFT_Draw_Fast_VLine(centerX, centerY, radius + 1, color);		   // 垂直线 (x, y) to (x, y+r)
-		TFT_Draw_Fast_HLine(centerX, centerY, radius + 1, color);		   // 水平线 (x, y) to (x+r, y)
+		TFT_Draw_Fast_VLine(centerX, centerY, radius + 1, color); // 垂直线 (x, y) to (x, y+r)
+		TFT_Draw_Fast_HLine(centerX, centerY, radius + 1, color); // 水平线 (x, y) to (x+r, y)
 	}
 	if (cornerMask & 0x4) // 左下角
 	{
@@ -653,7 +653,6 @@ void TFT_Fill_Quarter_Circle(uint16_t centerX, uint16_t centerY, uint8_t radius,
 		TFT_Draw_Fast_HLine(centerX - radius, centerY, radius + 1, color); // 水平线 (x-r, y) to (x, y)
 	}
 
-
 	while (plotX < plotY)
 	{
 		plotX++; // x 增加 1
@@ -665,10 +664,14 @@ void TFT_Fill_Quarter_Circle(uint16_t centerX, uint16_t centerY, uint8_t radius,
 		{
 			// 在 y 变化前绘制水平线段 (较窄的部分)
 			hlineWidth = plotX + 1;
-			if (cornerMask & 0x1) TFT_Draw_Fast_HLine(centerX, centerY - plotY, hlineWidth, color); // 右上
-			if (cornerMask & 0x2) TFT_Draw_Fast_HLine(centerX, centerY + plotY, hlineWidth, color); // 右下
-			if (cornerMask & 0x4) TFT_Draw_Fast_HLine(centerX - plotX, centerY + plotY, hlineWidth, color); // 左下
-			if (cornerMask & 0x8) TFT_Draw_Fast_HLine(centerX - plotX, centerY - plotY, hlineWidth, color); // 左上
+			if (cornerMask & 0x1)
+				TFT_Draw_Fast_HLine(centerX, centerY - plotY, hlineWidth, color); // 右上
+			if (cornerMask & 0x2)
+				TFT_Draw_Fast_HLine(centerX, centerY + plotY, hlineWidth, color); // 右下
+			if (cornerMask & 0x4)
+				TFT_Draw_Fast_HLine(centerX - plotX, centerY + plotY, hlineWidth, color); // 左下
+			if (cornerMask & 0x8)
+				TFT_Draw_Fast_HLine(centerX - plotX, centerY - plotY, hlineWidth, color); // 左上
 
 			plotY--; // y 减小 1
 			decisionParam += ((plotX - plotY) << 2) + 10;
@@ -676,11 +679,14 @@ void TFT_Fill_Quarter_Circle(uint16_t centerX, uint16_t centerY, uint8_t radius,
 
 		// 绘制水平线段 (较宽的部分)
 		hlineWidth = plotY + 1;
-		if (cornerMask & 0x1) TFT_Draw_Fast_HLine(centerX, centerY - plotX, hlineWidth, color); // 右上
-		if (cornerMask & 0x2) TFT_Draw_Fast_HLine(centerX, centerY + plotX, hlineWidth, color); // 右下
-		if (cornerMask & 0x4) TFT_Draw_Fast_HLine(centerX - plotY, centerY + plotX, hlineWidth, color); // 左下
-		if (cornerMask & 0x8) TFT_Draw_Fast_HLine(centerX - plotY, centerY - plotX, hlineWidth, color); // 左上
-
+		if (cornerMask & 0x1)
+			TFT_Draw_Fast_HLine(centerX, centerY - plotX, hlineWidth, color); // 右上
+		if (cornerMask & 0x2)
+			TFT_Draw_Fast_HLine(centerX, centerY + plotX, hlineWidth, color); // 右下
+		if (cornerMask & 0x4)
+			TFT_Draw_Fast_HLine(centerX - plotY, centerY + plotX, hlineWidth, color); // 左下
+		if (cornerMask & 0x8)
+			TFT_Draw_Fast_HLine(centerX - plotY, centerY - plotX, hlineWidth, color); // 左上
 	}
 	// 注意: Fast_HLine/VLine 内部会 Flush，这里不需要额外 Flush
 }
@@ -754,10 +760,10 @@ void TFT_Fill_Rounded_Rectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t
 
 	// 3. 填充四个圆角区域 (调用辅助函数)
 	// 注意圆心坐标和 cornerMask
-	TFT_Fill_Quarter_Circle(x + radius, y + radius, radius, 8, color);						   // 左上角
-	TFT_Fill_Quarter_Circle(x + width - radius - 1, y + radius, radius, 1, color);			   // 右上角
+	TFT_Fill_Quarter_Circle(x + radius, y + radius, radius, 8, color);							// 左上角
+	TFT_Fill_Quarter_Circle(x + width - radius - 1, y + radius, radius, 1, color);				// 右上角
 	TFT_Fill_Quarter_Circle(x + width - radius - 1, y + height - radius - 1, radius, 2, color); // 右下角
-	TFT_Fill_Quarter_Circle(x + radius, y + height - radius - 1, radius, 4, color);			   // 左下角
+	TFT_Fill_Quarter_Circle(x + radius, y + height - radius - 1, radius, 4, color);				// 左下角
 
 	// 确保所有缓冲数据都被发送 (如果 Fill_Quarter_Circle 内部没有完全刷新)
 	// TFT_Flush_Buffer(1); // Fill_Rectangle 和 Fast_HLine/VLine 内部会刷新，可能不需要
