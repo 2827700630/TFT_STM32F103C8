@@ -123,7 +123,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    TFT_Show_String(5, 5,"sdh", WHITE, BLACK, 16, 0); // 需要 TFT_Show_String 函数
+    TFT_Show_String(5, 5,"aA0 1 0 0", WHITE, BLUE, 16, 0); // 需要 TFT_Show_String 函数
     // 5. LED 闪烁与延时
     HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
     // HAL_Delay(10); // 可以添加少量延时来控制帧率，或移除以测试最大性能
