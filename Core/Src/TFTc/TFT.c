@@ -1,10 +1,60 @@
 /*
  * @file    tft.c
- * @brief   TFT绘图及显示文字图片函数
+ * @brief   TFT绘图函数。这里的画图是以左上角为原点
  */
 #include "TFTh/TFT.h"
 #include "TFTh/TFT_io.h" // 包含底层 IO 函数
-#include "TFTh/TFTfont.h"
+#include <stdlib.h>		 // 用于 abs 函数
+
+// 宏定义：交换两个 int16_t 变量的值
+#define SWAP_INT16(a, b) \
+	{                    \
+		int16_t t = a;   \
+		a = b;           \
+		b = t;           \
+	}
+
+/*
+ * @brief  在指定坐标绘制一个点
+ * @param  x     点的列坐标
+ * @param  y     点的行坐标
+ * @param  color 点的颜色 (RGB565格式)
+ * @retval 无
+ * @note   优化：移除了不必要的 Flush。
+ *         在连续绘制多个点时，调用者应在最后负责 Flush (如果需要)。
+ */
+void TFT_Draw_Point(uint16_t x, uint16_t y, uint16_t color)
+{
+	TFT_Set_Address(x, y, x, y); // 设置光标位置到单个点
+	TFT_Write_Data16(color);	 // 对于单点，直接写入即可 (阻塞)
+}
+
+/*
+ * @brief  绘制多个点 (利用缓冲区加速)
+ * @param  points 点坐标数组
+ * @param  count  点的数量
+ * @param  color  点的颜色 (RGB565格式)
+ * @retval 无
+ */
+void TFT_Draw_MultiPoint(const TFT_Point points[], uint16_t count, uint16_t color)
+{
+	if (points == NULL || count == 0)
+	{
+		return;
+	}
+
+	// 重置缓冲区确保从空的缓冲区开始
+	TFT_Reset_Buffer();
+
+	for (uint16_t i = 0; i < count; i++)
+	{
+		TFT_Set_Address(points[i].x, points[i].y, points[i].x, points[i].y); // 设置单个点地址
+		TFT_Buffer_Write16(color);											 // 将颜色写入缓冲区
+	}
+
+	// 确保所有缓冲的点都被发送
+	TFT_Flush_Buffer(1);
+}
 
 /*
  * @brief  在指定区域填充单色
@@ -27,23 +77,67 @@ void TFT_Fill_Area(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t 
 
 	TFT_Set_Address(x_start, y_start, x_end - 1, y_end - 1); // 设置显示范围 (Set_Address 使用包含的坐标)
 
+	// 重置缓冲区以确保从一个干净的缓冲区开始
+	TFT_Reset_Buffer();
+
+	// 批量填充像素，利用缓冲区提高性能
 	for (uint32_t i = 0; i < total_pixels; i++)
 	{
-		TFT_Write_Data16(color); // 写入颜色数据
+		TFT_Buffer_Write16(color); // 写入颜色数据到缓冲区，缓冲区满时会自动发送
 	}
+
+	// 确保所有剩余数据都被发送
+	TFT_Flush_Buffer(1);
 }
 
 /*
- * @brief  在指定坐标绘制一个点
- * @param  x     点的列坐标
- * @param  y     点的行坐标
- * @param  color 点的颜色 (RGB565格式)
+ * @brief  快速绘制水平线
+ * @param  x     起始列坐标
+ * @param  y     行坐标
+ * @param  width 线宽度
+ * @param  color 线的颜色 (RGB565格式)
  * @retval 无
  */
-void TFT_Draw_Point(uint16_t x, uint16_t y, uint16_t color)
+void TFT_Draw_Fast_HLine(uint16_t x, uint16_t y, uint16_t width, uint16_t color)
 {
-	TFT_Set_Address(x, y, x, y); // 设置光标位置到单个点
-	TFT_Write_Data16(color);
+	if (width == 0)
+		return;
+
+	TFT_Set_Address(x, y, x + width - 1, y); // 设置地址窗口
+	TFT_Reset_Buffer();						 // 重置缓冲区
+
+	// 填充像素到缓冲区
+	for (uint16_t i = 0; i < width; i++)
+	{
+		TFT_Buffer_Write16(color);
+	}
+
+	TFT_Flush_Buffer(1); // 发送并等待完成
+}
+
+/*
+ * @brief  快速绘制垂直线
+ * @param  x     列坐标
+ * @param  y     起始行坐标
+ * @param  height 线高度
+ * @param  color 线的颜色 (RGB565格式)
+ * @retval 无
+ */
+void TFT_Draw_Fast_VLine(uint16_t x, uint16_t y, uint16_t height, uint16_t color)
+{
+	if (height == 0)
+		return;
+
+	TFT_Set_Address(x, y, x, y + height - 1); // 设置地址窗口
+	TFT_Reset_Buffer();						  // 重置缓冲区
+
+	// 填充像素到缓冲区
+	for (uint16_t i = 0; i < height; i++)
+	{
+		TFT_Buffer_Write16(color);
+	}
+
+	TFT_Flush_Buffer(1); // 发送并等待完成
 }
 
 /*
@@ -62,11 +156,9 @@ void TFT_Draw_Line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t 
 	{
 		if (x1 > x2) // 确保 x1 <= x2
 		{
-			uint16_t temp = x1;
-			x1 = x2;
-			x2 = temp;
+			SWAP_INT16(x1, x2); // 使用宏交换
 		}
-		TFT_Fill_Area(x1, y1, x2 + 1, y1 + 1, color); // 使用 Fill_Area 绘制水平线
+		TFT_Draw_Fast_HLine(x1, y1, x2 - x1 + 1, color); // 使用快速水平线函数
 		return;
 	}
 
@@ -75,55 +167,56 @@ void TFT_Draw_Line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t 
 	{
 		if (y1 > y2) // 确保 y1 <= y2
 		{
-			uint16_t temp = y1;
-			y1 = y2;
-			y2 = temp;
+			SWAP_INT16(y1, y2); // 使用宏交换
 		}
-		TFT_Fill_Area(x1, y1, x1 + 1, y2 + 1, color); // 使用 Fill_Area 绘制垂直线
+		TFT_Draw_Fast_VLine(x1, y1, y2 - y1 + 1, color); // 使用快速垂直线函数
 		return;
 	}
 
 	// Bresenham 算法绘制斜线
-	int dx = x2 - x1;
-	int dy = y2 - y1;
-	int ux = ((dx > 0) << 1) - 1; // x步进方向: 1或-1
-	int uy = ((dy > 0) << 1) - 1; // y步进方向: 1或-1
-	int x = x1, y = y1, eps;
+	int16_t deltaX = abs(x2 - x1);		// X 轴距离绝对值
+	int16_t deltaY = abs(y2 - y1);		// Y 轴距离绝对值
+	int16_t stepX = (x1 < x2) ? 1 : -1; // X 轴步进方向
+	int16_t stepY = (y1 < y2) ? 1 : -1; // Y 轴步进方向
+	int16_t currentX = x1;
+	int16_t currentY = y1;
+	int16_t errorTerm; // 误差项
 
-	dx = (dx > 0 ? dx : -dx); // 取绝对值
-	dy = (dy > 0 ? dy : -dy);
-
-	if (dx > dy)
+	// 注意：由于 TFT_Draw_Point 不再 Flush，这里的循环效率会提高
+	if (deltaX > deltaY) // 以 X 轴为主轴 (斜率绝对值 < 1)
 	{
-		eps = dx >> 1;
-		while (x != x2) // 循环直到到达终点 x 坐标
+		errorTerm = deltaX / 2; // 初始误差
+		while (currentX != x2)	// 循环直到到达终点 X 坐标
 		{
-			TFT_Draw_Point(x, y, color);
-			eps -= dy;
-			if (eps < 0)
+			TFT_Draw_Point(currentX, currentY, color); // 绘制当前点
+			errorTerm -= deltaY;
+			if (errorTerm < 0)
 			{
-				y += uy;
-				eps += dx;
+				currentY += stepY; // Y 移动一步
+				errorTerm += deltaX;
 			}
-			x += ux;
+			currentX += stepX; // X 移动一步
 		}
 	}
-	else
+	else // 以 Y 轴为主轴 (斜率绝对值 >= 1)
 	{
-		eps = dy >> 1;
-		while (y != y2) // 循环直到到达终点 y 坐标
+		errorTerm = deltaY / 2; // 初始误差
+		while (currentY != y2)	// 循环直到到达终点 Y 坐标
 		{
-			TFT_Draw_Point(x, y, color);
-			eps -= dx;
-			if (eps < 0)
+			TFT_Draw_Point(currentX, currentY, color); // 绘制当前点
+			errorTerm -= deltaX;
+			if (errorTerm < 0)
 			{
-				x += ux;
-				eps += dy;
+				currentX += stepX; // X 移动一步
+				errorTerm += deltaY;
 			}
-			y += uy;
+			currentY += stepY; // Y 移动一步
 		}
 	}
-	TFT_Draw_Point(x, y, color); // 绘制终点 (Bresenham 循环不包含终点)
+	TFT_Draw_Point(currentX, currentY, color); // 绘制终点 (Bresenham 循环不包含终点)
+
+	// 如果 TFT_Write_Data16 未来改为非阻塞+缓冲，则可能需要在此处添加 Flush
+	TFT_Flush_Buffer(1); // 绘制斜线后刷新缓冲区，因为 Draw_Point 不刷新
 }
 
 /*
@@ -137,14 +230,43 @@ void TFT_Draw_Line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t 
  */
 void TFT_Draw_Rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
 {
-	TFT_Draw_Line(x1, y1, x2, y1, color); // 上边
-	TFT_Draw_Line(x1, y1, x1, y2, color); // 左边
-	TFT_Draw_Line(x1, y2, x2, y2, color); // 下边
-	TFT_Draw_Line(x2, y1, x2, y2, color); // 右边
+	TFT_Draw_Fast_HLine(x1, y1, x2 - x1 + 1, color); // 上边
+	TFT_Draw_Fast_HLine(x1, y2, x2 - x1 + 1, color); // 下边
+	TFT_Draw_Fast_VLine(x1, y1, y2 - y1 + 1, color); // 左边
+	TFT_Draw_Fast_VLine(x2, y1, y2 - y1 + 1, color); // 右边
 }
 
 /*
- * @brief  绘制一个圆 (中点画圆法)
+ * @brief  填充一个实心矩形
+ * @param  x1    左上角列坐标
+ * @param  y1    左上角行坐标
+ * @param  x2    右下角列坐标
+ * @param  y2    右下角行坐标
+ * @param  color 矩形填充颜色 (RGB565格式)
+ * @retval 无
+ */
+void TFT_Fill_Rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
+{
+	if (x1 > x2)
+	{
+		uint16_t temp = x1;
+		x1 = x2;
+		x2 = temp;
+	}
+
+	if (y1 > y2)
+	{
+		uint16_t temp = y1;
+		y1 = y2;
+		y2 = temp;
+	}
+
+	// 直接调用填充区域函数
+	TFT_Fill_Area(x1, y1, x2 + 1, y2 + 1, color);
+}
+
+/*
+ * @brief  绘制一个空心圆 (中点画圆法)
  * @param  x0    圆心列坐标
  * @param  y0    圆心行坐标
  * @param  r     圆的半径
@@ -153,567 +275,490 @@ void TFT_Draw_Rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint
  */
 void TFT_Draw_Circle(uint16_t x0, uint16_t y0, uint8_t r, uint16_t color)
 {
-	int a = 0, b = r;
-	int di = 3 - (r << 1); // 初始决策值
+	int16_t plotX = 0;					  // 相对于圆心的 x 坐标
+	int16_t plotY = r;					  // 相对于圆心的 y 坐标
+	int16_t decisionParam = 3 - (r << 1); // 初始决策参数: 3 - 2*r
+	TFT_Point circlePoints[8];			  // 用于存储对称点的数组
 
-	while (a <= b)
+	// 绘制圆的初始四个点 (0, r), (0, -r), (r, 0), (-r, 0)
+	// 这些点在循环中不会被绘制，需要单独处理
+	if (r > 0)
 	{
-		TFT_Draw_Point(x0 + a, y0 - b, color); // 5
-		TFT_Draw_Point(x0 - a, y0 - b, color); // 4
-		TFT_Draw_Point(x0 + b, y0 - a, color); // 6
-		TFT_Draw_Point(x0 - b, y0 - a, color); // 3
-		TFT_Draw_Point(x0 + b, y0 + a, color); // 1
-		TFT_Draw_Point(x0 - b, y0 + a, color); // 2
-		TFT_Draw_Point(x0 + a, y0 + b, color); // 0
-		TFT_Draw_Point(x0 - a, y0 + b, color); // 7
-		a++;
-		// 使用决策参数 di 更新下一个点的位置
-		if (di < 0)
-		{
-			di += (a << 2) + 6;
-		}
-		else
-		{
-			di += 10 + ((a - b) << 2);
-			b--;
-		}
-	}
-}
-
-/*
- * @brief  显示一个中文字符串 (自动根据字号调用相应函数)
- * @param  x      起始列坐标
- * @param  y      起始行坐标
- * @param  str    要显示的UTF-8编码的中文字符串指针
- * @param  fg_color 字体颜色
- * @param  bg_color 背景颜色
- * @param  font_size 字号 (支持 16, 24, 32)
- * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
- * @retval 无
- * @note   确保传入的字符串是UTF-8编码，并且字库文件包含对应的汉字。
- *         GBK/GB2312编码的汉字需要先转换为UTF-8。
- *         此函数假设每个汉字在字库中占用的字节数与字号相关。
- */
-void TFT_Show_Chinese_String(uint16_t x, uint16_t y, uint8_t *str, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode)
-{
-	uint16_t x0 = x;
-	while (*str != 0)
-	{
-		// 检查是否是ASCII字符 (0x00~0x7F)
-		if (*str < 0x80)
-		{
-			// 处理换行符等控制字符 (如果需要)
-			if (*str == '\n')
-			{
-				y += font_size; // 换行
-				x = x0;			// 回到行首
-			}
-			else if (*str == '\r')
-			{
-				// 回车符，通常忽略或视为换行
-			}
-			else
-			{
-				// 显示ASCII字符
-				TFT_Show_Char(x, y, *str, fg_color, bg_color, font_size, mode);
-				x += font_size / 2; // ASCII字符宽度
-			}
-			str++; // 指向下一个字节
-		}
-		// 检查是否是UTF-8编码的汉字 (通常以 0xE0~0xEF 开头，占3字节)
-		else if ((*str & 0xF0) == 0xE0 && (*(str + 1) & 0xC0) == 0x80 && (*(str + 2) & 0xC0) == 0x80)
-		{
-			// 根据字号调用不同的汉字显示函数
-			if (font_size == 16)
-			{
-				TFT_Show_Chinese_16x16(x, y, str, fg_color, bg_color, font_size, mode);
-			}
-			else if (font_size == 24)
-			{
-				TFT_Show_Chinese_24x24(x, y, str, fg_color, bg_color, font_size, mode);
-			}
-			else if (font_size == 32)
-			{
-				TFT_Show_Chinese_32x32(x, y, str, fg_color, bg_color, font_size, mode);
-			}
-			// 其他字号的汉字显示... (如果支持)
-
-			x += font_size; // 移动到下一个字符位置 (汉字宽度等于字号)
-			str += 3;		// UTF-8汉字占3字节
-		}
-		else
-		{
-			// 非法或不支持的字符，跳过
-			str++;
-		}
-	}
-}
-
-/*
- * @brief  显示一个16x16的汉字
- * @param  x      起始列坐标
- * @param  y      起始行坐标
- * @param  hz_ptr 指向要显示的汉字内码(UTF-8编码，通常3字节)的指针
- * @param  fg_color 字体颜色
- * @param  bg_color 背景颜色
- * @param  font_size 字号 (固定为16)
- * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
- * @retval 无
- * @note   字库 tfont16 必须包含对应的汉字点阵数据。
- *         字库索引 Index[] 存储的是汉字的内码。
- */
-void TFT_Show_Chinese_16x16(uint16_t x, uint16_t y, uint8_t *hz_ptr, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode)
-{
-	uint8_t i, j;
-	uint16_t k;
-	uint16_t hz_count;		 // 汉字库中的汉字数量
-	uint16_t bytes_per_char; // 每个汉字点阵占用的字节数
-	uint16_t x0 = x;
-
-	bytes_per_char = (font_size / 8) * font_size;	  // 计算点阵字节数 (16x16 -> 32 bytes)
-	hz_count = sizeof(tfont16) / sizeof(typFNT_GB16); // 统计汉字库中的汉字数量
-
-	for (k = 0; k < hz_count; k++)
-	{
-		// 比较字库中的索引和传入的汉字内码 (假设字库索引是GBK/GB2312的2字节)
-		// 注意：这里需要根据字库实际存储的编码来匹配！
-		// 如果字库是GBK/GB2312，而传入的是UTF-8，需要转换或修改匹配逻辑。
-		// 假设 tfont16 的 Index 存储的是 GBK/GB2312 内码 (2字节)
-		// 这是一个潜在的问题点，需要确认字库格式和输入编码一致性
-		if ((tfont16[k].Index[0] == *(hz_ptr)) && (tfont16[k].Index[1] == *(hz_ptr + 1))) // 假设匹配GBK/GB2312前两字节
-		{
-			TFT_Set_Address(x, y, x + font_size - 1, y + font_size - 1);
-			for (i = 0; i < bytes_per_char; i++)
-			{
-				uint8_t font_byte = tfont16[k].Msk[i]; // 获取点阵数据字节
-				for (j = 0; j < 8; j++)
-				{
-					if (!mode) // 非叠加模式 (绘制背景)
-					{
-						if (font_byte & (0x80 >> j)) // 从高位到低位检查像素点
-						{
-							TFT_Write_Data16(fg_color);
-						}
-						else
-						{
-							TFT_Write_Data16(bg_color);
-						}
-					}
-					else // 叠加模式 (透明背景)
-					{
-						if (font_byte & (0x80 >> j)) // 只绘制字体本身的像素点
-						{
-							TFT_Draw_Point(x, y, fg_color);
-						}
-						x++;					   // 移动到下一个像素位置
-						if ((x - x0) == font_size) // 当前行绘制完成
-						{
-							x = x0; // 回到行首
-							y++;	// 移动到下一行
-							break;	// 当前字节处理完毕，跳到下一个字节
-						}
-					}
-				}
-			}
-			return; // 找到并显示汉字后退出函数
-		}
-	}
-	// 如果字库中没有找到该汉字，可以选择显示一个替代字符或不显示
-}
-
-/*
- * @brief  显示一个24x24的汉字
- * @param  x      起始列坐标
- * @param  y      起始行坐标
- * @param  hz_ptr 指向要显示的汉字内码(UTF-8编码，通常3字节)的指针
- * @param  fg_color 字体颜色
- * @param  bg_color 背景颜色
- * @param  font_size 字号 (固定为24)
- * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
- * @retval 无
- * @note   字库 tfont24 必须包含对应的汉字点阵数据。
- *         同样需要注意字库索引与输入编码的匹配问题。
- */
-void TFT_Show_Chinese_24x24(uint16_t x, uint16_t y, uint8_t *hz_ptr, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode)
-{
-	uint8_t i, j;
-	uint16_t k;
-	uint16_t hz_count;		 // 汉字库中的汉字数量
-	uint16_t bytes_per_char; // 每个汉字点阵占用的字节数
-	uint16_t x0 = x;
-
-	bytes_per_char = (font_size / 8) * font_size;	  // 计算点阵字节数 (24x24 -> 72 bytes)
-	hz_count = sizeof(tfont24) / sizeof(typFNT_GB24); // 统计汉字库中的汉字数量
-
-	for (k = 0; k < hz_count; k++)
-	{
-		// 假设 tfont24 的 Index 存储的是 GBK/GB2312 内码 (2字节)
-		if ((tfont24[k].Index[0] == *(hz_ptr)) && (tfont24[k].Index[1] == *(hz_ptr + 1))) // 假设匹配GBK/GB2312前两字节
-		{
-			TFT_Set_Address(x, y, x + font_size - 1, y + font_size - 1);
-			for (i = 0; i < bytes_per_char; i++)
-			{
-				uint8_t font_byte = tfont24[k].Msk[i];
-				for (j = 0; j < 8; j++)
-				{
-					if (!mode)
-					{
-						if (font_byte & (0x80 >> j))
-						{
-							TFT_Write_Data16(fg_color);
-						}
-						else
-						{
-							TFT_Write_Data16(bg_color);
-						}
-					}
-					else
-					{
-						if (font_byte & (0x80 >> j))
-						{
-							TFT_Draw_Point(x, y, fg_color);
-						}
-						x++;
-						if ((x - x0) == font_size)
-						{
-							x = x0;
-							y++;
-							break;
-						}
-					}
-				}
-			}
-			return;
-		}
-	}
-}
-
-/*
- * @brief  显示一个32x32的汉字
- * @param  x      起始列坐标
- * @param  y      起始行坐标
- * @param  hz_ptr 指向要显示的汉字内码(UTF-8编码，通常3字节)的指针
- * @param  fg_color 字体颜色
- * @param  bg_color 背景颜色
- * @param  font_size 字号 (固定为32)
- * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
- * @retval 无
- * @note   字库 tfont32 必须包含对应的汉字点阵数据。
- *         同样需要注意字库索引与输入编码的匹配问题。
- */
-void TFT_Show_Chinese_32x32(uint16_t x, uint16_t y, uint8_t *hz_ptr, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode)
-{
-	uint8_t i, j;
-	uint16_t k;
-	uint16_t hz_count;		 // 汉字库中的汉字数量
-	uint16_t bytes_per_char; // 每个汉字点阵占用的字节数
-	uint16_t x0 = x;
-
-	bytes_per_char = (font_size / 8) * font_size;	  // 计算点阵字节数 (32x32 -> 128 bytes)
-	hz_count = sizeof(tfont32) / sizeof(typFNT_GB32); // 统计汉字库中的汉字数量
-
-	for (k = 0; k < hz_count; k++)
-	{
-		// 假设 tfont32 的 Index 存储的是 GBK/GB2312 内码 (2字节)
-		if ((tfont32[k].Index[0] == *(hz_ptr)) && (tfont32[k].Index[1] == *(hz_ptr + 1))) // 假设匹配GBK/GB2312前两字节
-		{
-			TFT_Set_Address(x, y, x + font_size - 1, y + font_size - 1);
-			for (i = 0; i < bytes_per_char; i++)
-			{
-				uint8_t font_byte = tfont32[k].Msk[i];
-				for (j = 0; j < 8; j++)
-				{
-					if (!mode)
-					{
-						if (font_byte & (0x80 >> j))
-						{
-							TFT_Write_Data16(fg_color);
-						}
-						else
-						{
-							TFT_Write_Data16(bg_color);
-						}
-					}
-					else
-					{
-						if (font_byte & (0x80 >> j))
-						{
-							TFT_Draw_Point(x, y, fg_color);
-						}
-						x++;
-						if ((x - x0) == font_size)
-						{
-							x = x0;
-							y++;
-							break;
-						}
-					}
-				}
-			}
-			return;
-		}
-	}
-}
-
-/*
- * @brief  显示一个ASCII字符
- * @param  x      起始列坐标
- * @param  y      起始行坐标
- * @param  ascii_char 要显示的ASCII字符
- * @param  fg_color 字体颜色
- * @param  bg_color 背景颜色
- * @param  font_size 字号 (支持 16, 32)
- * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
- * @retval 无
- * @note   ASCII字符宽度为字号的一半。
- *         字库 ascii_1608 和 ascii_3216 必须包含对应的字符点阵数据。
- */
-void TFT_Show_Char(uint16_t x, uint16_t y, uint8_t ascii_char, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode)
-{
-	uint8_t temp, t, c;
-	uint16_t i, bytes_per_char; // 每个字符点阵占用的字节数
-	uint16_t char_height = font_size;
-	uint16_t char_width = font_size / 2; // ASCII字符宽度
-	const uint8_t *font_ptr;			 // 指向字体数据的指针
-
-	// 检查字符范围
-	if (ascii_char < ' ' || ascii_char > '~')
-		return; // 只显示可见ASCII字符
-
-	// 计算点阵字节数和获取字体数据指针
-	if (font_size == 16)
-	{
-		bytes_per_char = 16;					 // 8x16字体，16字节
-		font_ptr = ascii_1608[ascii_char - ' ']; // 获取对应字符的点阵数据
-	}
-	else if (font_size == 32)
-	{
-		bytes_per_char = 64;					 // 16x32字体，64字节
-		font_ptr = ascii_3216[ascii_char - ' ']; // 获取对应字符的点阵数据
+		TFT_Draw_Point(x0, y0 + r, color);
+		TFT_Draw_Point(x0, y0 - r, color);
+		TFT_Draw_Point(x0 + r, y0, color);
+		TFT_Draw_Point(x0 - r, y0, color);
+		TFT_Flush_Buffer(1); // 刷新初始点
 	}
 	else
 	{
-		return; // 不支持的字号
+		TFT_Draw_Point(x0, y0, color); // 半径为0，只画一个点
+		TFT_Flush_Buffer(1);
+		return;
 	}
 
-	if (!mode) // 非叠加模式 (背景不透明)
+	while (plotX < plotY) // 仅需计算八分之一圆弧 (第二象限从 y 轴到 y=x)
 	{
-		TFT_Set_Address(x, y, x + char_width - 1, y + char_height - 1); // 设置字符显示区域
-		for (i = 0; i < bytes_per_char; i++)
-		{
-			temp = font_ptr[i];
-			for (t = 0; t < 8; t++)
-			{
-				if (temp & (0x80 >> t)) // 假设字体是逐行扫描，高位在前
-				{
-					TFT_Write_Data16(fg_color);
-				}
-				else
-				{
-					TFT_Write_Data16(bg_color);
-				}
-			}
-		}
-	}
-	else // 叠加模式 (背景透明)
-	{
-		// 逐点绘制，只绘制字体颜色部分
-		for (i = 0; i < char_height; i++) // 遍历行
-		{
-			// 计算当前行在字体数据中的起始字节索引和位偏移
-			// 假设字体数据是按行优先存储，每行占 char_width / 8 字节
-			uint16_t byte_row_start_index = i * (char_width / 8);
-			for (c = 0; c < char_width / 8; c++) // 遍历当前行需要的字节
-			{
-				temp = font_ptr[byte_row_start_index + c]; // 获取当前字节
-				for (t = 0; t < 8; t++)
-				{
-					if (temp & (0x80 >> t)) // 检查像素位
-					{
-						TFT_Draw_Point(x + c * 8 + t, y + i, fg_color); // 画一个点
-					}
-					// 背景透明，不绘制背景色
-				}
-			}
-			// 如果宽度不是8的倍数，需要处理剩余的位 (此示例中 ASCII 宽度是8或16，无需处理)
-		}
-	}
-}
+		plotX++; // x 增加 1
 
-/*
- * @brief  显示一个ASCII字符串
- * @param  x      起始列坐标
- * @param  y      起始行坐标
- * @param  str    要显示的ASCII字符串指针
- * @param  fg_color 字体颜色
- * @param  bg_color 背景颜色
- * @param  font_size 字号 (支持 16, 32)
- * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
- * @retval 无
- */
-void TFT_Show_String(uint16_t x, uint16_t y, const uint8_t *str, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode)
-{
-	uint16_t x0 = x;
-	while (*str != 0)
-	{
-		// 处理换行符等控制字符 (如果需要)
-		if (*str == '\n')
+		// 更新决策参数
+		if (decisionParam < 0)
 		{
-			y += font_size; // 换行
-			x = x0;			// 回到行首
-		}
-		else if (*str == '\r')
-		{
-			// 回车符，通常忽略或视为换行
+			// 选择 E 点 (x+1, y)
+			decisionParam += (plotX << 2) + 6; // decisionParam += 4*plotX + 6
 		}
 		else
 		{
-			TFT_Show_Char(x, y, *str, fg_color, bg_color, font_size, mode);
-			x += font_size / 2; // 移动到下一个字符位置 (ASCII宽度为字号一半)
+			// 选择 SE 点 (x+1, y-1)
+			plotY--;									  // y 减小 1
+			decisionParam += ((plotX - plotY) << 2) + 10; // decisionParam += 4*(plotX - plotY) + 10
 		}
-		str++;
-	}
-}
 
-/*
- * @brief  计算m的n次方 (整数次幂)
- * @param  m 底数
- * @param  n 指数 (非负整数)
- * @retval uint32_t 计算结果
- */
-uint32_t TFT_Pow(uint8_t m, uint8_t n)
-{
-	uint32_t result = 1;
-	while (n--)
-		result *= m;
-	return result;
-}
-
-/*
- * @brief  显示一个无符号整型数字
- * @param  x      起始列坐标
- * @param  y      起始行坐标
- * @param  num    要显示的无符号整数
- * @param  len    要显示的数字位数 (不足位会补空格)
- * @param  fg_color 字体颜色
- * @param  bg_color 背景颜色
- * @param  font_size 字号 (支持 16, 32)
- * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
- * @retval 无
- */
-void TFT_Show_Int_Num(uint16_t x, uint16_t y, uint16_t num, uint8_t len, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode)
-{
-	uint8_t t, temp;
-	uint8_t enshow = 0;
-	uint8_t buf[10]; // 假设最多显示10位数字 (uint16_t 最多5位)
-	uint8_t char_width = font_size / 2;
-
-	for (t = 0; t < len; t++)
-	{
-		temp = (num / TFT_Pow(10, len - t - 1)) % 10;
-		if (enshow == 0 && t < (len - 1))
+		// 如果 plotX == plotY，说明到达 y=x 线，只需绘制 4 个点
+		if (plotX == plotY)
 		{
-			if (temp == 0)
+			circlePoints[0] = (TFT_Point){x0 + plotX, y0 + plotY};
+			circlePoints[1] = (TFT_Point){x0 - plotX, y0 + plotY};
+			circlePoints[2] = (TFT_Point){x0 + plotX, y0 - plotY};
+			circlePoints[3] = (TFT_Point){x0 - plotX, y0 - plotY};
+			TFT_Draw_MultiPoint(circlePoints, 4, color); // 批量绘制 4 个点
+		}
+		else
+		{
+			// 计算 8 个对称点
+			circlePoints[0] = (TFT_Point){x0 + plotX, y0 + plotY}; // 第 4 象限
+			circlePoints[1] = (TFT_Point){x0 - plotX, y0 + plotY}; // 第 5 象限
+			circlePoints[2] = (TFT_Point){x0 + plotX, y0 - plotY}; // 第 1 象限
+			circlePoints[3] = (TFT_Point){x0 - plotX, y0 - plotY}; // 第 8 象限
+			circlePoints[4] = (TFT_Point){x0 + plotY, y0 + plotX}; // 第 3 象限
+			circlePoints[5] = (TFT_Point){x0 - plotY, y0 + plotX}; // 第 6 象限
+			circlePoints[6] = (TFT_Point){x0 + plotY, y0 - plotX}; // 第 2 象限
+			circlePoints[7] = (TFT_Point){x0 - plotY, y0 - plotX}; // 第 7 象限
+			// 调用 MultiPoint 函数批量绘制这 8 个点
+			TFT_Draw_MultiPoint(circlePoints, 8, color);
+		}
+		// 注意：不需要在这里 Flush，因为 TFT_Draw_MultiPoint 内部会 Flush
+	}
+}
+
+/*
+ * @brief  绘制一个实心圆 (水平线扫描法)
+ * @param  x0    圆心列坐标
+ * @param  y0    圆心行坐标
+ * @param  r     圆的半径
+ * @param  color 填充颜色 (RGB565格式)
+ * @retval 无
+ */
+void TFT_Fill_Circle(uint16_t x0, uint16_t y0, uint8_t r, uint16_t color)
+{
+	if (r == 0)
+	{
+		// 处理半径为 0 的情况：绘制一个点
+		TFT_Draw_Point(x0, y0, color);
+		TFT_Flush_Buffer(1); // 刷新单个点
+		return;
+	}
+
+	// 绘制实心圆方法：水平线扫描填充 (基于 Bresenham 画圆算法)
+	int16_t plotX = 0;					  // 相对于圆心的 x 坐标
+	int16_t plotY = r;					  // 相对于圆心的 y 坐标
+	int16_t decisionParam = 3 - (r << 1); // 初始决策参数: 3 - 2*r
+
+	// 1. 绘制中心水平线 (对应 x=0, y=r)
+	TFT_Draw_Fast_HLine(x0 - r, y0, 2 * r + 1, color);
+
+	// 2. 循环计算圆弧上的点，并绘制对称的水平线填充
+	while (plotX < plotY)
+	{
+		plotX++; // x 增加 1
+
+		// 更新决策参数
+		if (decisionParam < 0)
+		{
+			// 选择 E 点 (x+1, y)
+			decisionParam += (plotX << 2) + 6; // decisionParam += 4*plotX + 6
+		}
+		else
+		{
+			// 选择 SE 点 (x+1, y-1)
+			// 在 y 变化时绘制水平线
+			// 绘制基于 (x, y) 对称点的水平线 (较窄的线段)
+			// 行坐标: y0 + y 和 y0 - y
+			// 列范围: x0 - x 到 x0 + x (宽度 2*x + 1)
+			TFT_Draw_Fast_HLine(x0 - plotX, y0 + plotY, 2 * plotX + 1, color);
+			TFT_Draw_Fast_HLine(x0 - plotX, y0 - plotY, 2 * plotX + 1, color);
+			plotY--;									  // y 减小 1
+			decisionParam += ((plotX - plotY) << 2) + 10; // decisionParam += 4*(plotX - plotY) + 10
+		}
+
+		// 绘制基于 (y, x) 对称点的水平线 (较宽的线段)
+		// 行坐标: y0 + x 和 y0 - x
+		// 列范围: x0 - y 到 x0 + y (宽度 2*y + 1)
+		TFT_Draw_Fast_HLine(x0 - plotY, y0 + plotX, 2 * plotY + 1, color);
+		TFT_Draw_Fast_HLine(x0 - plotY, y0 - plotX, 2 * plotY + 1, color);
+	}
+	// 注意: Fast_HLine 内部会 Flush，这里不需要额外 Flush
+}
+
+/*
+ * @brief  绘制一个空心三角形
+ * @param  x1, y1 第一个顶点坐标
+ * @param  x2, y2 第二个顶点坐标
+ * @param  x3, y3 第三个顶点坐标
+ * @param  color  三角形边框颜色 (RGB565格式)
+ * @retval 无
+ */
+void TFT_Draw_Triangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, uint16_t color)
+{
+	TFT_Draw_Line(x1, y1, x2, y2, color); // 绘制第一条边
+	TFT_Draw_Line(x2, y2, x3, y3, color); // 绘制第二条边
+	TFT_Draw_Line(x3, y3, x1, y1, color); // 绘制第三条边
+}
+
+/*
+ * @brief  填充一个实心三角形 (水平扫描线算法)
+ * @param  x1, y1 第一个顶点坐标
+ * @param  x2, y2 第二个顶点坐标
+ * @param  x3, y3 第三个顶点坐标
+ * @param  color  三角形填充颜色 (RGB565格式)
+ * @retval 无
+ */
+void TFT_Fill_Triangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, uint16_t color)
+{
+	int16_t scanlineStartX, scanlineEndX;						  // 当前扫描线填充的起始和结束 X 坐标
+	int16_t currentY, lastY;									  // 当前扫描线 Y 坐标, 结束 Y 坐标
+	int16_t deltaX1, deltaY1, deltaX2, deltaY2, deltaX3, deltaY3; // 三条边的 X, Y 差值
+	int32_t edge1Accumulator, edge2Accumulator;					  // 边斜率累加器 (使用 int32_t 防止溢出)
+
+	// 1. 按 Y 坐标对顶点进行排序 (y1 <= y2 <= y3)
+	if (y1 > y2)
+	{
+		SWAP_INT16(y1, y2);
+		SWAP_INT16(x1, x2);
+	}
+	if (y2 > y3)
+	{
+		SWAP_INT16(y3, y2);
+		SWAP_INT16(x3, x2);
+	}
+	if (y1 > y2)
+	{
+		SWAP_INT16(y1, y2);
+		SWAP_INT16(x1, x2);
+	}
+
+	// 2. 处理特殊情况：水平线或单个点
+	if (y1 == y3)
+	{
+		scanlineStartX = scanlineEndX = x1;
+		if (x2 < scanlineStartX)
+			scanlineStartX = x2;
+		else if (x2 > scanlineEndX)
+			scanlineEndX = x2;
+		if (x3 < scanlineStartX)
+			scanlineStartX = x3;
+		else if (x3 > scanlineEndX)
+			scanlineEndX = x3;
+		TFT_Draw_Fast_HLine(scanlineStartX, y1, scanlineEndX - scanlineStartX + 1, color);
+		return;
+	}
+
+	// 3. 计算边的差值
+	deltaX1 = x2 - x1;
+	deltaY1 = y2 - y1; // 边 1->2
+	deltaX2 = x3 - x1;
+	deltaY2 = y3 - y1; // 边 1->3
+	deltaX3 = x3 - x2;
+	deltaY3 = y3 - y2; // 边 2->3
+
+	// 初始化斜率累加器
+	edge1Accumulator = 0;
+	edge2Accumulator = 0;
+
+	// 4. 填充上部分三角形 (从 y1 到 y2-1)
+	// 使用边 1->2 和 边 1->3
+	if (y1 != y2)
+	{					// 只有当 y1 和 y2 不同时才需要填充上部分
+		lastY = y2 - 1; // 循环包含 y1, 不包含 y2
+		for (currentY = y1; currentY <= lastY; currentY++)
+		{
+			// 计算当前扫描线与两条边的交点 X 坐标
+			// 使用累加器避免浮点运算和重复除法
+			scanlineStartX = x1 + (edge1Accumulator / deltaY1);
+			scanlineEndX = x1 + (edge2Accumulator / deltaY2);
+			// 更新累加器
+			edge1Accumulator += deltaX1;
+			edge2Accumulator += deltaX2;
+			// 确保 scanlineStartX <= scanlineEndX
+			if (scanlineStartX > scanlineEndX)
+				SWAP_INT16(scanlineStartX, scanlineEndX);
+			// 绘制水平扫描线
+			TFT_Draw_Fast_HLine(scanlineStartX, currentY, scanlineEndX - scanlineStartX + 1, color);
+		}
+	}
+
+	// 5. 填充下部分三角形 (从 y2 到 y3)
+	// 使用边 2->3 和 边 1->3
+	// 重置/调整累加器以匹配新的起始点和边
+	edge1Accumulator = (int32_t)deltaX3 * (currentY - y2); // 边 2->3 的累加器，从 y2 开始
+	// edge2Accumulator 继续使用边 1->3 的累加器
+
+	if (y2 != y3)
+	{				// 只有当 y2 和 y3 不同时才需要填充下部分
+		lastY = y3; // 循环包含 y2 和 y3
+		for (; currentY <= lastY; currentY++)
+		{
+			// 计算当前扫描线与两条边的交点 X 坐标
+			scanlineStartX = x2 + (edge1Accumulator / deltaY3); // 基于顶点 2 和边 2->3
+			scanlineEndX = x1 + (edge2Accumulator / deltaY2);	// 基于顶点 1 和边 1->3
+			// 更新累加器
+			edge1Accumulator += deltaX3;
+			edge2Accumulator += deltaX2;
+			// 确保 scanlineStartX <= scanlineEndX
+			if (scanlineStartX > scanlineEndX)
+				SWAP_INT16(scanlineStartX, scanlineEndX);
+			// 绘制水平扫描线
+			TFT_Draw_Fast_HLine(scanlineStartX, currentY, scanlineEndX - scanlineStartX + 1, color);
+		}
+	}
+	// 注意: Fast_HLine 内部会 Flush，这里不需要额外 Flush
+}
+
+/*
+ * @brief  绘制四分之一圆弧 (使用 Bresenham 算法)
+ * @param  centerX, centerY 圆弧所在圆的圆心坐标
+ * @param  radius   圆弧半径
+ * @param  cornerMask 指定绘制哪个角落 (位掩码: 1=右上, 2=右下, 4=左下, 8=左上)
+ * @param  color    颜色
+ * @retval 无
+ */
+void TFT_Draw_Quarter_Circle(uint16_t centerX, uint16_t centerY, uint8_t radius, uint8_t cornerMask, uint16_t color)
+{
+	int16_t plotX = 0;						   // 相对于圆心的 x 坐标
+	int16_t plotY = radius;					   // 相对于圆心的 y 坐标
+	int16_t decisionParam = 3 - (radius << 1); // 初始决策参数: 3 - 2*r
+
+	// 绘制圆弧的初始点 (坐标轴上的点)
+	if (cornerMask == 1) // 右上角
+	{
+		TFT_Draw_Point(centerX + radius, centerY, color); // (x+r, y)
+		TFT_Draw_Point(centerX, centerY - radius, color); // (x, y-r)
+	}
+	if (cornerMask == 2) // 右下角
+	{
+		TFT_Draw_Point(centerX + radius, centerY, color); // (x+r, y)
+		TFT_Draw_Point(centerX, centerY + radius, color); // (x, y+r)
+	}
+	if (cornerMask == 4) // 左下角
+	{
+		TFT_Draw_Point(centerX - radius, centerY, color); // (x-r, y)
+		TFT_Draw_Point(centerX, centerY + radius, color); // (x, y+r)
+	}
+	if (cornerMask == 8) // 左上角
+	{
+		TFT_Draw_Point(centerX - radius, centerY, color); // (x-r, y)
+		TFT_Draw_Point(centerX, centerY - radius, color); // (x, y-r)
+	}
+
+	// 循环绘制圆弧上的其他点
+	while (plotX < plotY)
+	{
+		plotX++; // x 增加 1
+		if (decisionParam < 0)
+		{
+			decisionParam += (plotX << 2) + 6;
+		}
+		else
+		{
+			plotY--; // y 减小 1
+			decisionParam += ((plotX - plotY) << 2) + 10;
+		}
+
+		// 根据 cornerMask 绘制对应的圆弧点
+		// 检查 plotX != plotY 避免在对角线上重复绘制
+		if (plotX != plotY)
+		{
+			if (cornerMask & 0x1) // 右上角 (第二象限部分: x>0, y<0)
 			{
-				// 高位为0且非最后一位，显示空格或背景色
-				if (!mode) // 不透明模式填充背景色
-				{
-					TFT_Fill_Area(x + t * char_width, y, x + (t + 1) * char_width, y + font_size, bg_color);
-				}
-				else // 透明模式显示空格 (如果需要占位)
-				{
-					// TFT_Show_Char(x + t * char_width, y, ' ', fg_color, bg_color, font_size, mode); // 或者直接跳过
-				}
-				continue;
+				TFT_Draw_Point(centerX + plotX, centerY - plotY, color); // (x+x, y-y)
+				TFT_Draw_Point(centerX + plotY, centerY - plotX, color); // (x+y, y-x)
 			}
-			else
+			if (cornerMask & 0x2) // 右下角 (第三象限部分: x>0, y>0)
 			{
-				enshow = 1; // 开始显示数字
+				TFT_Draw_Point(centerX + plotY, centerY + plotX, color); // (x+y, y+x)
+				TFT_Draw_Point(centerX + plotX, centerY + plotY, color); // (x+x, y+y)
+			}
+			if (cornerMask & 0x4) // 左下角 (第六象限部分: x<0, y>0)
+			{
+				TFT_Draw_Point(centerX - plotX, centerY + plotY, color); // (x-x, y+y)
+				TFT_Draw_Point(centerX - plotY, centerY + plotX, color); // (x-y, y+x)
+			}
+			if (cornerMask & 0x8) // 左上角 (第七象限部分: x<0, y<0)
+			{
+				TFT_Draw_Point(centerX - plotY, centerY - plotX, color); // (x-y, y-x)
+				TFT_Draw_Point(centerX - plotX, centerY - plotY, color); // (x-x, y-y)
 			}
 		}
-		TFT_Show_Char(x + t * char_width, y, temp + '0', fg_color, bg_color, font_size, mode);
+		else
+		{ // plotX == plotY (对角线上的点)
+			if (cornerMask & 0x1)
+				TFT_Draw_Point(centerX + plotX, centerY - plotY, color);
+			if (cornerMask & 0x2)
+				TFT_Draw_Point(centerX + plotX, centerY + plotY, color);
+			if (cornerMask & 0x4)
+				TFT_Draw_Point(centerX - plotX, centerY + plotY, color);
+			if (cornerMask & 0x8)
+				TFT_Draw_Point(centerX - plotX, centerY - plotY, color);
+		}
 	}
+	// 需要刷新缓冲区，因为 Draw_Point 不刷新
+	TFT_Flush_Buffer(1);
 }
 
 /*
- * @brief  显示一个浮点数 (保留两位小数)
- * @param  x      起始列坐标
- * @param  y      起始行坐标
- * @param  num    要显示的浮点数
- * @param  int_len 整数部分要显示的位数 (不足补空格)
- * @param  fg_color 字体颜色
- * @param  bg_color 背景颜色
- * @param  font_size 字号 (支持 16, 32)
- * @param  mode   显示模式: 0=背景不透明, 1=背景透明 (叠加显示)
+ * @brief  填充实心四分之一圆弧区域 (使用水平线)
+ * @param  centerX, centerY 圆弧所在圆的圆心坐标
+ * @param  radius   圆弧半径
+ * @param  cornerMask 指定填充哪个角落 (位掩码: 1=右上, 2=右下, 4=左下, 8=左上)
+ * @param  color    颜色
  * @retval 无
+ * @note   使用水平线填充指定象限的圆弧区域。
  */
-void TFT_Show_Float_Num(uint16_t x, uint16_t y, float num, uint8_t int_len, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode)
+void TFT_Fill_Quarter_Circle(uint16_t centerX, uint16_t centerY, uint8_t radius, uint8_t cornerMask, uint16_t color)
 {
-	uint32_t integer_part;
-	uint16_t decimal_part;
-	uint8_t char_width = font_size / 2;
+	int16_t plotX = 0;						   // 相对于圆心的 x 坐标
+	int16_t plotY = radius;					   // 相对于圆心的 y 坐标
+	int16_t decisionParam = 3 - (radius << 1); // 初始决策参数: 3 - 2*r
+	uint16_t hlineWidth;					   // 水平线宽度
 
-	// 处理负数
-	if (num < 0)
+	// 填充从圆心开始的水平/垂直线段 (对应坐标轴上的部分)
+	if (cornerMask & 0x1) // 右上角
 	{
-		TFT_Show_Char(x, y, '-', fg_color, bg_color, font_size, mode);
-		x += char_width;
-		num = -num;
+		TFT_Draw_Fast_VLine(centerX, centerY - radius, radius + 1, color); // 垂直线 (x, y-r) to (x, y)
+		TFT_Draw_Fast_HLine(centerX, centerY, radius + 1, color);		   // 水平线 (x, y) to (x+r, y)
+	}
+	if (cornerMask & 0x2) // 右下角
+	{
+		TFT_Draw_Fast_VLine(centerX, centerY, radius + 1, color);		   // 垂直线 (x, y) to (x, y+r)
+		TFT_Draw_Fast_HLine(centerX, centerY, radius + 1, color);		   // 水平线 (x, y) to (x+r, y)
+	}
+	if (cornerMask & 0x4) // 左下角
+	{
+		TFT_Draw_Fast_VLine(centerX, centerY, radius + 1, color);		   // 垂直线 (x, y) to (x, y+r)
+		TFT_Draw_Fast_HLine(centerX - radius, centerY, radius + 1, color); // 水平线 (x-r, y) to (x, y)
+	}
+	if (cornerMask & 0x8) // 左上角
+	{
+		TFT_Draw_Fast_VLine(centerX, centerY - radius, radius + 1, color); // 垂直线 (x, y-r) to (x, y)
+		TFT_Draw_Fast_HLine(centerX - radius, centerY, radius + 1, color); // 水平线 (x-r, y) to (x, y)
 	}
 
-	integer_part = (uint32_t)num;						   // 获取整数部分
-	decimal_part = (uint16_t)((num - integer_part) * 100); // 获取两位小数部分
 
-	// 显示整数部分
-	TFT_Show_Int_Num(x, y, integer_part, int_len, fg_color, bg_color, font_size, mode);
+	while (plotX < plotY)
+	{
+		plotX++; // x 增加 1
+		if (decisionParam < 0)
+		{
+			decisionParam += (plotX << 2) + 6;
+		}
+		else
+		{
+			// 在 y 变化前绘制水平线段 (较窄的部分)
+			hlineWidth = plotX + 1;
+			if (cornerMask & 0x1) TFT_Draw_Fast_HLine(centerX, centerY - plotY, hlineWidth, color); // 右上
+			if (cornerMask & 0x2) TFT_Draw_Fast_HLine(centerX, centerY + plotY, hlineWidth, color); // 右下
+			if (cornerMask & 0x4) TFT_Draw_Fast_HLine(centerX - plotX, centerY + plotY, hlineWidth, color); // 左下
+			if (cornerMask & 0x8) TFT_Draw_Fast_HLine(centerX - plotX, centerY - plotY, hlineWidth, color); // 左上
 
-	// 显示小数点
-	x += int_len * char_width;
-	TFT_Show_Char(x, y, '.', fg_color, bg_color, font_size, mode);
-	x += char_width;
+			plotY--; // y 减小 1
+			decisionParam += ((plotX - plotY) << 2) + 10;
+		}
 
-	// 显示小数部分 (固定显示两位)
-	TFT_Show_Char(x, y, (decimal_part / 10) + '0', fg_color, bg_color, font_size, mode);
-	x += char_width;
-	TFT_Show_Char(x, y, (decimal_part % 10) + '0', fg_color, bg_color, font_size, mode);
+		// 绘制水平线段 (较宽的部分)
+		hlineWidth = plotY + 1;
+		if (cornerMask & 0x1) TFT_Draw_Fast_HLine(centerX, centerY - plotX, hlineWidth, color); // 右上
+		if (cornerMask & 0x2) TFT_Draw_Fast_HLine(centerX, centerY + plotX, hlineWidth, color); // 右下
+		if (cornerMask & 0x4) TFT_Draw_Fast_HLine(centerX - plotY, centerY + plotX, hlineWidth, color); // 左下
+		if (cornerMask & 0x8) TFT_Draw_Fast_HLine(centerX - plotY, centerY - plotX, hlineWidth, color); // 左上
+
+	}
+	// 注意: Fast_HLine/VLine 内部会 Flush，这里不需要额外 Flush
 }
 
 /*
- * @brief  显示一幅存储在Flash中的图片
- * @param  x      图片左上角列坐标
- * @param  y      图片左上角行坐标
- * @param  width  图片宽度 (像素)
- * @param  height 图片高度 (像素)
- * @param  pic_ptr 指向图片数据数组 (RGB565格式, 高字节在前, 低字节在后)
+ * @brief  绘制一个空心圆角矩形
+ * @param  x     左上角列坐标
+ * @param  y     左上角行坐标
+ * @param  width 宽度
+ * @param  height 高度
+ * @param  radius 圆角半径
+ * @param  color 边框颜色 (RGB565格式)
  * @retval 无
- * @note   图片数据需要预先使用取模软件生成，格式为16位真彩色，高位在前。
- *         确保 pic_ptr 指向的数据大小至少为 width * height * 2 字节。
  */
-void TFT_Show_Picture(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t pic_ptr[])
+void TFT_Draw_Rounded_Rectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t radius, uint16_t color)
 {
-	uint32_t i, total_pixels;
-	const uint8_t *pdata = pic_ptr;
+	if (width == 0 || height == 0)
+		return; // 无效尺寸
+	// 限制圆角半径不超过宽度和高度的一半
+	if (radius > width / 2)
+		radius = width / 2;
+	if (radius > height / 2)
+		radius = height / 2;
 
-	TFT_Set_Address(x, y, x + width - 1, y + height - 1); // 设置图片显示区域
+	// 绘制直线部分
+	// 上边 (从左圆角结束到右圆角开始)
+	TFT_Draw_Fast_HLine(x + radius, y, width - 2 * radius, color);
+	// 下边 (从左圆角结束到右圆角开始)
+	TFT_Draw_Fast_HLine(x + radius, y + height - 1, width - 2 * radius, color);
+	// 左边 (从上圆角结束到下圆角开始)
+	TFT_Draw_Fast_VLine(x, y + radius, height - 2 * radius, color);
+	// 右边 (从上圆角结束到下圆角开始)
+	TFT_Draw_Fast_VLine(x + width - 1, y + radius, height - 2 * radius, color);
 
-	total_pixels = (uint32_t)width * height;
+	// 绘制圆角部分 (调用辅助函数绘制四个角的圆弧)
+	// 注意圆心坐标的计算
+	TFT_Draw_Quarter_Circle(x + radius, y + radius, radius, 8, color);							// 左上角 (cornerMask=8)
+	TFT_Draw_Quarter_Circle(x + width - radius - 1, y + radius, radius, 1, color);				// 右上角 (cornerMask=1)
+	TFT_Draw_Quarter_Circle(x + width - radius - 1, y + height - radius - 1, radius, 2, color); // 右下角 (cornerMask=2)
+	TFT_Draw_Quarter_Circle(x + radius, y + height - radius - 1, radius, 4, color);				// 左下角 (cornerMask=4)
+}
 
-	// 优化：如果启用了 DMA，并且数据量大，可以考虑一次性启动 DMA 传输整个图片数据
-	// 这需要 SPI DMA 支持内存到外设模式，并且 HAL 库提供了相应的函数
-	// 例如 HAL_SPI_Transmit_DMA(TFT_spi, (uint8_t*)pic_ptr, total_pixels * 2);
-	// 但需要确保 DMA 配置正确，并且在传输完成前不能有其他 SPI 操作
+/*
+ * @brief  填充一个实心圆角矩形
+ * @param  x     左上角列坐标
+ * @param  y     左上角行坐标
+ * @param  width 宽度
+ * @param  height 高度
+ * @param  radius 圆角半径
+ * @param  color 填充颜色 (RGB565格式)
+ * @retval 无
+ */
+void TFT_Fill_Rounded_Rectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint8_t radius, uint16_t color)
+{
+	if (width == 0 || height == 0)
+		return; // 无效尺寸
+	// 限制圆角半径不超过宽度和高度的一半
+	if (radius > width / 2)
+		radius = width / 2;
+	if (radius > height / 2)
+		radius = height / 2;
 
-	// 当前实现：逐个像素发送，利用 TFT_Write_Data16 内部的 DMA（如果启用）
-	for (i = 0; i < total_pixels; i++)
-	{
-		// 假设图片数据是高字节在前，低字节在后
-		uint16_t color = ((uint16_t)pdata[0] << 8) | pdata[1];
-		TFT_Write_Data16(color);
-		pdata += 2;
+	// 1. 填充中心矩形区域 (不包含圆角部分)
+	TFT_Fill_Rectangle(x + radius, y, x + width - radius - 1, y + height - 1, color);
 
-		// 如果图片数据是低字节在前，高字节在后:
-		// uint16_t color = pdata[0] | ((uint16_t)pdata[1] << 8);
-		// TFT_Write_Data16(color);
-		// pdata += 2;
-	}
+	// 2. 填充左右两侧，圆角上下的矩形区域
+	// 左侧矩形 (x, y+radius) 到 (x+radius-1, y+height-radius-1)
+	TFT_Fill_Rectangle(x, y + radius, x + radius - 1, y + height - radius - 1, color);
+	// 右侧矩形 (x+width-radius, y+radius) 到 (x+width-1, y+height-radius-1)
+	TFT_Fill_Rectangle(x + width - radius, y + radius, x + width - 1, y + height - radius - 1, color);
+
+	// 3. 填充四个圆角区域 (调用辅助函数)
+	// 注意圆心坐标和 cornerMask
+	TFT_Fill_Quarter_Circle(x + radius, y + radius, radius, 8, color);						   // 左上角
+	TFT_Fill_Quarter_Circle(x + width - radius - 1, y + radius, radius, 1, color);			   // 右上角
+	TFT_Fill_Quarter_Circle(x + width - radius - 1, y + height - radius - 1, radius, 2, color); // 右下角
+	TFT_Fill_Quarter_Circle(x + radius, y + height - radius - 1, radius, 4, color);			   // 左下角
+
+	// 确保所有缓冲数据都被发送 (如果 Fill_Quarter_Circle 内部没有完全刷新)
+	// TFT_Flush_Buffer(1); // Fill_Rectangle 和 Fast_HLine/VLine 内部会刷新，可能不需要
 }

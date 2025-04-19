@@ -13,7 +13,13 @@
     *   绘制点 (`TFT_Draw_Point`)
     *   绘制直线 (`TFT_Draw_Line`)
     *   绘制矩形 (`TFT_Draw_Rectangle`)
+    *   填充矩形 (`TFT_Fill_Rectangle`)
     *   绘制圆 (`TFT_Draw_Circle`)
+    *   填充圆 (`TFT_Fill_Circle`)
+    *   绘制三角形 (`TFT_Draw_Triangle`)
+    *   填充三角形 (`TFT_Fill_Triangle`)
+    *   绘制圆角矩形 (`TFT_Draw_Rounded_Rectangle`)
+    *   填充圆角矩形 (`TFT_Fill_Rounded_Rectangle`)
 *   **文本显示**:
     *   显示 ASCII 字符 (`TFT_Show_Char`)
     *   显示 ASCII 字符串 (`TFT_Show_String`)
@@ -103,9 +109,10 @@ Drivers/                # HAL 库和 CMSIS 文件
 
 ## 更新日志
 
-*   **2025/4/18**:
-    *   修改SPI传输逻辑提高效率
-
+*   **2025/4/19**:
+    *   改进代码可读性：使用更清晰的变量名并添加中文注释 (TFT.c, TFT_io.c, TFT.h, TFT_io.h)。
+    *   增加SPI缓冲区大幅提升DMA效率。
+    *   完善画图算法，画图现在也可以应用DMA了
 
 *   **2025/4/18**:
     *   开始重新整理工程。

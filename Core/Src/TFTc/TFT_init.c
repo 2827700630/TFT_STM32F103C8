@@ -13,6 +13,7 @@
 void TFT_Init_ST7735(SPI_HandleTypeDef *hspi)
 {
 	TFT_IO_Init(hspi); // 初始化 IO 层，传递 SPI 句柄
+	// TFT_IO_Init 内部已将 tft_init_mode 设置为 1，无需再次调用 TFT_Set_Mode(1)
 
 	TFT_Pin_RES_Set(0); // 硬复位TFT (低)
 	HAL_Delay(100);
@@ -105,9 +106,9 @@ void TFT_Init_ST7735(SPI_HandleTypeDef *hspi)
 	TFT_Write_Data8(0x00); // MY=0, MX=0, MV=0, ML=0, RGB=0, MH=0
 #elif DISPLAY_DIRECTION == 5 // ST7735R 旋转180度 (黑板, RGB)
 	TFT_Write_Data8(0xC0); // MY=1, MX=1, MV=0, ML=0, RGB=0, MH=0
-						   // 注意: ST7735R 的 90/270 度旋转可能需要不同的 MADCTL 值，这里未列出
-						   // 例如 90度: 0x60 (MY=0,MX=1,MV=1,RGB=0)
-						   // 例如 270度: 0xA0 (MY=1,MX=0,MV=1,RGB=0)
+	// 注意: ST7735R 的 90/270 度旋转可能需要不同的 MADCTL 值，这里未列出
+	// 例如 90度: 0x60 (MY=0,MX=1,MV=1,RGB=0)
+	// 例如 270度: 0xA0 (MY=1,MX=0,MV=1,RGB=0)
 #else
 #error "Invalid DISPLAY_DIRECTION defined in TFT_io.h"
 #endif
