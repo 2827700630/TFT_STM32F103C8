@@ -1,5 +1,10 @@
-#ifndef __TFT_INIT_H
-#define __TFT_INIT_H
+/*
+ * @file    tft_io.h
+ * @brief   TFT底层IO驱动头文件
+ */
+#ifndef __TFT_IO_H
+#define __TFT_IO_H
+
 #include "main.h"
 #include "spi.h" // 包含 spi.h 以获取 SPI_HandleTypeDef 类型
 #include <stdint.h>
@@ -18,24 +23,36 @@
 #define DISPLAY_DIRECTION 5 // 请根据实际使用的LCD型号和期望的显示方向选择合适的宏值
 //------------------------------------
 
-//----------------- TFT 控制引脚宏定义 -----------------
-// 使用HAL库函数简化引脚操作
+//----------------- TFT 控制引脚函数声明 -----------------
+// 这些函数需要在 tft_io.c 中根据具体硬件平台实现
 
-// 复位引脚 (RES/RST)
-#define TFT_RES_LOW() HAL_GPIO_WritePin(TFT_RES_GPIO_Port, TFT_RES_Pin, GPIO_PIN_RESET) // 拉低RES引脚
-#define TFT_RES_HIGH() HAL_GPIO_WritePin(TFT_RES_GPIO_Port, TFT_RES_Pin, GPIO_PIN_SET)  // 拉高RES引脚
+/**
+ * @brief  控制复位引脚 (RES/RST)
+ * @param  state: 0=拉低, 1=拉高
+ * @retval 无
+ */
+void TFT_Pin_RES_Set(uint8_t state);
 
-// 数据/命令选择引脚 (DC/RS)
-#define TFT_DC_LOW() HAL_GPIO_WritePin(TFT_DC_GPIO_Port, TFT_DC_Pin, GPIO_PIN_RESET) // 选择命令模式
-#define TFT_DC_HIGH() HAL_GPIO_WritePin(TFT_DC_GPIO_Port, TFT_DC_Pin, GPIO_PIN_SET)  // 选择数据模式
+/**
+ * @brief  控制数据/命令选择引脚 (DC/RS)
+ * @param  state: 0=命令模式 (低), 1=数据模式 (高)
+ * @retval 无
+ */
+void TFT_Pin_DC_Set(uint8_t state);
 
-// 片选引脚 (CS)
-#define TFT_CS_LOW() HAL_GPIO_WritePin(TFT_CS_GPIO_Port, TFT_CS_Pin, GPIO_PIN_RESET) // 片选选中
-#define TFT_CS_HIGH() HAL_GPIO_WritePin(TFT_CS_GPIO_Port, TFT_CS_Pin, GPIO_PIN_SET)  // 片选取消
+/**
+ * @brief  控制片选引脚 (CS)
+ * @param  state: 0=选中 (低), 1=取消选中 (高)
+ * @retval 无
+ */
+void TFT_Pin_CS_Set(uint8_t state);
 
-// 背光引脚 (BLK/BL)
-#define TFT_BLK_LOW() HAL_GPIO_WritePin(TFT_BL_GPIO_Port, TFT_BL_Pin, GPIO_PIN_RESET) // 关闭背光
-#define TFT_BLK_HIGH() HAL_GPIO_WritePin(TFT_BL_GPIO_Port, TFT_BL_Pin, GPIO_PIN_SET)  // 打开背光
+/**
+ * @brief  控制背光引脚 (BLK/BL)
+ * @param  state: 0=关闭 (低), 1=打开 (高)
+ * @retval 无
+ */
+void TFT_Pin_BLK_Set(uint8_t state);
 
 //----------------- 常用颜色定义 (RGB565格式) -----------------
 #define WHITE 0xFFFF   // 白色
@@ -53,7 +70,14 @@
 #define BRRED 0XFC07   // 棕红色
 #define GRAY 0X8430    // 灰色
 
-//----------------- TFT驱动函数声明 -----------------
+//----------------- TFT IO 函数声明 -----------------
+
+/**
+ * @brief  初始化 TFT IO 层
+ * @param  hspi 指向 SPI_HandleTypeDef 结构的指针
+ * @retval 无
+ */
+void TFT_IO_Init(SPI_HandleTypeDef *hspi);
 
 /**
  * @brief  向TFT写入8位数据
@@ -87,14 +111,7 @@ void TFT_Write_Command(uint8_t command);
  */
 void TFT_Set_Address(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end);
 
-/**
- * @brief  通用 ST7735 初始化序列
- * @param  hspi 指向 SPI_HandleTypeDef 结构的指针
- * @retval 无
- * @note   此函数基于常见的 ST7735 初始化流程，并根据 DISPLAY_DIRECTION 调整 MADCTL。
- *         适用于 ST7735S 和 ST7735R 变种。
- *         伽马值等其他参数可能需要根据具体屏幕微调。
- */
-void TFT_Init_ST7735(SPI_HandleTypeDef *hspi);
+// HAL库回调函数声明 (如果需要在其他地方调用，否则可以只在 .c 文件中)
+// void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi);
 
 #endif

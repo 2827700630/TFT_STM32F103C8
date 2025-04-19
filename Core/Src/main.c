@@ -18,13 +18,14 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "dma.h"
 #include "spi.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "TFT/TFT.h"
-#include "TFT/TFT_init.h"
+#include "TFTh/TFT.h"
+#include "TFTh/TFT_init.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -88,13 +89,14 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
   // TFT_Init_ST7735R(&hspi1); // LCD初始化，请看此函数注释 (示例：如果使用 ST7735R)
-  TFT_Init_ST7735(&hspi1);        // TFT初始化, 传入 SPI1 句柄
+  TFT_Init_ST7735(&hspi1);              // TFT初始化, 传入 SPI1 句柄
   TFT_Fill_Area(0, 0, 130, 161, BLACK); // 白色背景
   // TFT_Fill_Area(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1, BLUE); // 蓝色背景 (使用宏定义宽高)
-  TFT_Draw_Point(0, 0, RED); // 在 (0, 0) 位置绘制一个红色点
+  TFT_Draw_Point(0, 0, RED);       // 在 (0, 0) 位置绘制一个红色点
   TFT_Draw_Point(127, 159, GREEN); // 在 (127, 159) 位置绘制一个绿色点
   /* USER CODE END 2 */
 
@@ -104,13 +106,13 @@ int main(void)
   {
     HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin); // 翻转 LED 引脚的状态
 
-    // //三原色刷屏测试
-    // TFT_Fill_Area(0, 0, 128, 160, BLUE);
-
-    // TFT_Fill_Area(0, 0, 128, 160, GREEN);
-
-    // TFT_Fill_Area(0, 0, 128, 160, RED);
-
+    // 三原色刷屏测试
+    TFT_Fill_Area(0, 0, 128, 160, BLUE);
+    HAL_Delay(500); // 延时 500 毫秒
+    TFT_Fill_Area(0, 0, 128, 160, GREEN);
+    HAL_Delay(500);
+    TFT_Fill_Area(0, 0, 128, 160, RED);
+    HAL_Delay(500); // 延时 500 毫秒
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

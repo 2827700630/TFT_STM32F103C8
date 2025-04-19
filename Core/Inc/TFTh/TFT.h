@@ -2,7 +2,7 @@
 #define __TFT_H__
 
 #include "main.h"
-#include "TFT/TFT_init.h" // 包含lcd_init.h以使用颜色定义
+#include "TFTh/TFT_io.h"   // 包含 TFT_io.h 以使用底层函数和颜色定义
 #include <stdint.h>
 
 //----------------- TFT 绘图函数声明 -----------------

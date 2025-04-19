@@ -1,30 +1,35 @@
 /*
  * @file    tft.c
- * @brief   TFT绘图及显示函数
+ * @brief   TFT绘图及显示文字图片函数
  */
-#include "TFT/TFT.h"
-#include "TFT/TFT_init.h"
-#include "TFT/TFTfont.h"
+#include "TFTh/TFT.h"
+#include "TFTh/TFT_io.h" // 包含底层 IO 函数
+#include "TFTh/TFTfont.h"
 
 /*
  * @brief  在指定区域填充单色
  * @param  x_start 起始列坐标
  * @param  y_start 起始行坐标
- * @param  x_end   结束列坐标
- * @param  y_end   结束行坐标
+ * @param  x_end   结束列坐标 (不包含)
+ * @param  y_end   结束行坐标 (不包含)
  * @param  color   要填充的颜色 (RGB565格式)
  * @retval 无
  */
 void TFT_Fill_Area(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end, uint16_t color)
 {
-	uint16_t i, j;
-	TFT_Set_Address(x_start, y_start, x_end - 1, y_end - 1); // 设置显示范围 (结束坐标是包含的，所以减1)
-	for (i = y_start; i < y_end; i++)
+	// 检查坐标有效性，防止 x_end <= x_start 或 y_end <= y_start
+	if (x_end <= x_start || y_end <= y_start)
+		return;
+
+	uint32_t total_pixels = (uint32_t)(x_end - x_start) * (y_end - y_start);
+	if (total_pixels == 0)
+		return;
+
+	TFT_Set_Address(x_start, y_start, x_end - 1, y_end - 1); // 设置显示范围 (Set_Address 使用包含的坐标)
+
+	for (uint32_t i = 0; i < total_pixels; i++)
 	{
-		for (j = x_start; j < x_end; j++)
-		{
-			TFT_Write_Data16(color); // 写入颜色数据
-		}
+		TFT_Write_Data16(color); // 写入颜色数据
 	}
 }
 
@@ -42,7 +47,7 @@ void TFT_Draw_Point(uint16_t x, uint16_t y, uint16_t color)
 }
 
 /*
- * @brief  绘制一条直线 (Bresenham算法)
+ * @brief  绘制一条直线 (Bresenham算法, 优化水平/垂直线)
  * @param  x1    起点列坐标
  * @param  y1    起点行坐标
  * @param  x2    终点列坐标
@@ -52,6 +57,33 @@ void TFT_Draw_Point(uint16_t x, uint16_t y, uint16_t color)
  */
 void TFT_Draw_Line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color)
 {
+	// 优化：处理水平线
+	if (y1 == y2)
+	{
+		if (x1 > x2) // 确保 x1 <= x2
+		{
+			uint16_t temp = x1;
+			x1 = x2;
+			x2 = temp;
+		}
+		TFT_Fill_Area(x1, y1, x2 + 1, y1 + 1, color); // 使用 Fill_Area 绘制水平线
+		return;
+	}
+
+	// 优化：处理垂直线
+	if (x1 == x2)
+	{
+		if (y1 > y2) // 确保 y1 <= y2
+		{
+			uint16_t temp = y1;
+			y1 = y2;
+			y2 = temp;
+		}
+		TFT_Fill_Area(x1, y1, x1 + 1, y2 + 1, color); // 使用 Fill_Area 绘制垂直线
+		return;
+	}
+
+	// Bresenham 算法绘制斜线
 	int dx = x2 - x1;
 	int dy = y2 - y1;
 	int ux = ((dx > 0) << 1) - 1; // x步进方向: 1或-1
@@ -64,7 +96,7 @@ void TFT_Draw_Line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t 
 	if (dx > dy)
 	{
 		eps = dx >> 1;
-		while (x != x2)
+		while (x != x2) // 循环直到到达终点 x 坐标
 		{
 			TFT_Draw_Point(x, y, color);
 			eps -= dy;
@@ -79,7 +111,7 @@ void TFT_Draw_Line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t 
 	else
 	{
 		eps = dy >> 1;
-		while (y != y2)
+		while (y != y2) // 循环直到到达终点 y 坐标
 		{
 			TFT_Draw_Point(x, y, color);
 			eps -= dx;
@@ -91,7 +123,7 @@ void TFT_Draw_Line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t 
 			y += uy;
 		}
 	}
-	TFT_Draw_Point(x, y, color); // 绘制终点
+	TFT_Draw_Point(x, y, color); // 绘制终点 (Bresenham 循环不包含终点)
 }
 
 /*
@@ -152,7 +184,7 @@ void TFT_Draw_Circle(uint16_t x0, uint16_t y0, uint8_t r, uint16_t color)
  * @brief  显示一个中文字符串 (自动根据字号调用相应函数)
  * @param  x      起始列坐标
  * @param  y      起始行坐标
- * @param  str    要显示的UTF-8编码的中文字符串指针 (每个汉字占3字节)
+ * @param  str    要显示的UTF-8编码的中文字符串指针
  * @param  fg_color 字体颜色
  * @param  bg_color 背景颜色
  * @param  font_size 字号 (支持 16, 24, 32)
@@ -164,27 +196,55 @@ void TFT_Draw_Circle(uint16_t x0, uint16_t y0, uint8_t r, uint16_t color)
  */
 void TFT_Show_Chinese_String(uint16_t x, uint16_t y, uint8_t *str, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode)
 {
+	uint16_t x0 = x;
 	while (*str != 0)
 	{
-		// 检查是否为ASCII字符 (简单判断)
+		// 检查是否是ASCII字符 (0x00~0x7F)
 		if (*str < 0x80)
-		{ // 假设是ASCII
-			TFT_Show_Char(x, y, *str, fg_color, bg_color, font_size, mode);
-			x += font_size / 2; // ASCII字符宽度通常为字号一半
-			str++;
+		{
+			// 处理换行符等控制字符 (如果需要)
+			if (*str == '\n')
+			{
+				y += font_size; // 换行
+				x = x0;			// 回到行首
+			}
+			else if (*str == '\r')
+			{
+				// 回车符，通常忽略或视为换行
+			}
+			else
+			{
+				// 显示ASCII字符
+				TFT_Show_Char(x, y, *str, fg_color, bg_color, font_size, mode);
+				x += font_size / 2; // ASCII字符宽度
+			}
+			str++; // 指向下一个字节
+		}
+		// 检查是否是UTF-8编码的汉字 (通常以 0xE0~0xEF 开头，占3字节)
+		else if ((*str & 0xF0) == 0xE0 && (*(str + 1) & 0xC0) == 0x80 && (*(str + 2) & 0xC0) == 0x80)
+		{
+			// 根据字号调用不同的汉字显示函数
+			if (font_size == 16)
+			{
+				TFT_Show_Chinese_16x16(x, y, str, fg_color, bg_color, font_size, mode);
+			}
+			else if (font_size == 24)
+			{
+				TFT_Show_Chinese_24x24(x, y, str, fg_color, bg_color, font_size, mode);
+			}
+			else if (font_size == 32)
+			{
+				TFT_Show_Chinese_32x32(x, y, str, fg_color, bg_color, font_size, mode);
+			}
+			// 其他字号的汉字显示... (如果支持)
+
+			x += font_size; // 移动到下一个字符位置 (汉字宽度等于字号)
+			str += 3;		// UTF-8汉字占3字节
 		}
 		else
-		{ // 假设是多字节字符 (UTF-8汉字通常3字节)
-			if (font_size == 16)
-				TFT_Show_Chinese_16x16(x, y, str, fg_color, bg_color, font_size, mode);
-			else if (font_size == 24)
-				TFT_Show_Chinese_24x24(x, y, str, fg_color, bg_color, font_size, mode);
-			else if (font_size == 32)
-				TFT_Show_Chinese_32x32(x, y, str, fg_color, bg_color, font_size, mode);
-			else
-				return;		// 不支持的字号
-			str += 3;		// UTF-8 汉字通常占3字节
-			x += font_size; // 移动到下一个字符位置
+		{
+			// 非法或不支持的字符，跳过
+			str++;
 		}
 	}
 }
@@ -410,35 +470,41 @@ void TFT_Show_Chinese_32x32(uint16_t x, uint16_t y, uint8_t *hz_ptr, uint16_t fg
  */
 void TFT_Show_Char(uint16_t x, uint16_t y, uint8_t ascii_char, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode)
 {
-	uint8_t temp, t;
+	uint8_t temp, t, c;
 	uint16_t i, bytes_per_char; // 每个字符点阵占用的字节数
-	uint16_t x0 = x;
-	uint8_t char_width = font_size / 2; // ASCII字符宽度
+	uint16_t char_height = font_size;
+	uint16_t char_width = font_size / 2; // ASCII字符宽度
+	const uint8_t *font_ptr;			 // 指向字体数据的指针
 
-	// 计算点阵字节数
+	// 检查字符范围
+	if (ascii_char < ' ' || ascii_char > '~')
+		return; // 只显示可见ASCII字符
+
+	// 计算点阵字节数和获取字体数据指针
 	if (font_size == 16)
-		bytes_per_char = 16; // 8x16字体，16字节
-	else if (font_size == 32)
-		bytes_per_char = 32; // 16x32字体，32字节
-	else
-		return; // 不支持的字号
-
-	uint8_t char_index = ascii_char - ' '; // 计算字符在字库数组中的索引 (假设字库从空格开始)
-
-	TFT_Set_Address(x, y, x + char_width - 1, y + font_size - 1); // 设置字符显示区域
-
-	for (i = 0; i < bytes_per_char; i++)
 	{
-		if (font_size == 16)
-			temp = ascii_1608[char_index][i]; // 调用8x16字体数据
-		else
-			temp = ascii_3216[char_index][i]; // 调用16x32字体数据
+		bytes_per_char = 16;					 // 8x16字体，16字节
+		font_ptr = ascii_1608[ascii_char - ' ']; // 获取对应字符的点阵数据
+	}
+	else if (font_size == 32)
+	{
+		bytes_per_char = 64;					 // 16x32字体，64字节
+		font_ptr = ascii_3216[ascii_char - ' ']; // 获取对应字符的点阵数据
+	}
+	else
+	{
+		return; // 不支持的字号
+	}
 
-		for (t = 0; t < 8; t++)
+	if (!mode) // 非叠加模式 (背景不透明)
+	{
+		TFT_Set_Address(x, y, x + char_width - 1, y + char_height - 1); // 设置字符显示区域
+		for (i = 0; i < bytes_per_char; i++)
 		{
-			if (!mode) // 非叠加模式
+			temp = font_ptr[i];
+			for (t = 0; t < 8; t++)
 			{
-				if (temp & (0x01 << t)) // 从低位到高位检查像素点 (注意：ASCII字库取模方式可能不同)
+				if (temp & (0x80 >> t)) // 假设字体是逐行扫描，高位在前
 				{
 					TFT_Write_Data16(fg_color);
 				}
@@ -447,20 +513,29 @@ void TFT_Show_Char(uint16_t x, uint16_t y, uint8_t ascii_char, uint16_t fg_color
 					TFT_Write_Data16(bg_color);
 				}
 			}
-			else // 叠加模式
+		}
+	}
+	else // 叠加模式 (背景透明)
+	{
+		// 逐点绘制，只绘制字体颜色部分
+		for (i = 0; i < char_height; i++) // 遍历行
+		{
+			// 计算当前行在字体数据中的起始字节索引和位偏移
+			// 假设字体数据是按行优先存储，每行占 char_width / 8 字节
+			uint16_t byte_row_start_index = i * (char_width / 8);
+			for (c = 0; c < char_width / 8; c++) // 遍历当前行需要的字节
 			{
-				if (temp & (0x01 << t))
+				temp = font_ptr[byte_row_start_index + c]; // 获取当前字节
+				for (t = 0; t < 8; t++)
 				{
-					TFT_Draw_Point(x, y, fg_color); // 画一个点
-				}
-				x++;						// 移动到下一个像素位置
-				if ((x - x0) == char_width) // 当前行绘制完成
-				{
-					x = x0; // 回到行首
-					y++;	// 移动到下一行
-					break;	// 当前字节处理完毕，跳到下一个字节
+					if (temp & (0x80 >> t)) // 检查像素位
+					{
+						TFT_Draw_Point(x + c * 8 + t, y + i, fg_color); // 画一个点
+					}
+					// 背景透明，不绘制背景色
 				}
 			}
+			// 如果宽度不是8的倍数，需要处理剩余的位 (此示例中 ASCII 宽度是8或16，无需处理)
 		}
 	}
 }
@@ -478,10 +553,24 @@ void TFT_Show_Char(uint16_t x, uint16_t y, uint8_t ascii_char, uint16_t fg_color
  */
 void TFT_Show_String(uint16_t x, uint16_t y, const uint8_t *str, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode)
 {
-	while (*str != '\0')
+	uint16_t x0 = x;
+	while (*str != 0)
 	{
-		TFT_Show_Char(x, y, *str, fg_color, bg_color, font_size, mode);
-		x += font_size / 2; // ASCII字符宽度为字号一半
+		// 处理换行符等控制字符 (如果需要)
+		if (*str == '\n')
+		{
+			y += font_size; // 换行
+			x = x0;			// 回到行首
+		}
+		else if (*str == '\r')
+		{
+			// 回车符，通常忽略或视为换行
+		}
+		else
+		{
+			TFT_Show_Char(x, y, *str, fg_color, bg_color, font_size, mode);
+			x += font_size / 2; // 移动到下一个字符位置 (ASCII宽度为字号一半)
+		}
 		str++;
 	}
 }
@@ -505,7 +594,7 @@ uint32_t TFT_Pow(uint8_t m, uint8_t n)
  * @param  x      起始列坐标
  * @param  y      起始行坐标
  * @param  num    要显示的无符号整数
- * @param  len    要显示的数字位数 (如果实际位数小于len，前面会补空格)
+ * @param  len    要显示的数字位数 (不足位会补空格)
  * @param  fg_color 字体颜色
  * @param  bg_color 背景颜色
  * @param  font_size 字号 (支持 16, 32)
@@ -515,26 +604,33 @@ uint32_t TFT_Pow(uint8_t m, uint8_t n)
 void TFT_Show_Int_Num(uint16_t x, uint16_t y, uint16_t num, uint8_t len, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode)
 {
 	uint8_t t, temp;
-	uint8_t enshow = 0; // 用于标记是否开始显示有效数字 (跳过前导零)
+	uint8_t enshow = 0;
+	uint8_t buf[10]; // 假设最多显示10位数字 (uint16_t 最多5位)
 	uint8_t char_width = font_size / 2;
 
 	for (t = 0; t < len; t++)
 	{
-		temp = (num / TFT_Pow(10, len - t - 1)) % 10; // 提取当前位的数字
+		temp = (num / TFT_Pow(10, len - t - 1)) % 10;
 		if (enshow == 0 && t < (len - 1))
 		{
 			if (temp == 0)
 			{
-				// 如果是前导零，且不是最后一位，则显示空格
-				TFT_Show_Char(x + t * char_width, y, ' ', fg_color, bg_color, font_size, mode);
+				// 高位为0且非最后一位，显示空格或背景色
+				if (!mode) // 不透明模式填充背景色
+				{
+					TFT_Fill_Area(x + t * char_width, y, x + (t + 1) * char_width, y + font_size, bg_color);
+				}
+				else // 透明模式显示空格 (如果需要占位)
+				{
+					// TFT_Show_Char(x + t * char_width, y, ' ', fg_color, bg_color, font_size, mode); // 或者直接跳过
+				}
 				continue;
 			}
 			else
 			{
-				enshow = 1; // 遇到第一个非零数字，开始正常显示
+				enshow = 1; // 开始显示数字
 			}
 		}
-		// 显示数字 (ASCII码 = 数字 + '0')
 		TFT_Show_Char(x + t * char_width, y, temp + '0', fg_color, bg_color, font_size, mode);
 	}
 }
@@ -544,7 +640,7 @@ void TFT_Show_Int_Num(uint16_t x, uint16_t y, uint16_t num, uint8_t len, uint16_
  * @param  x      起始列坐标
  * @param  y      起始行坐标
  * @param  num    要显示的浮点数
- * @param  int_len 整数部分要显示的位数 (不足会补空格)
+ * @param  int_len 整数部分要显示的位数 (不足补空格)
  * @param  fg_color 字体颜色
  * @param  bg_color 背景颜色
  * @param  font_size 字号 (支持 16, 32)
@@ -553,10 +649,9 @@ void TFT_Show_Int_Num(uint16_t x, uint16_t y, uint16_t num, uint8_t len, uint16_
  */
 void TFT_Show_Float_Num(uint16_t x, uint16_t y, float num, uint8_t int_len, uint16_t fg_color, uint16_t bg_color, uint8_t font_size, uint8_t mode)
 {
-	uint8_t t, char_width;
-	uint32_t integer_part, decimal_part;
-
-	char_width = font_size / 2;
+	uint32_t integer_part;
+	uint16_t decimal_part;
+	uint8_t char_width = font_size / 2;
 
 	// 处理负数
 	if (num < 0)
@@ -567,17 +662,20 @@ void TFT_Show_Float_Num(uint16_t x, uint16_t y, float num, uint8_t int_len, uint
 	}
 
 	integer_part = (uint32_t)num;						   // 获取整数部分
-	decimal_part = (uint32_t)((num - integer_part) * 100); // 获取两位小数部分
+	decimal_part = (uint16_t)((num - integer_part) * 100); // 获取两位小数部分
 
-	// 显示整数部分 (使用 TFT_Show_Int_Num 处理前导空格)
+	// 显示整数部分
 	TFT_Show_Int_Num(x, y, integer_part, int_len, fg_color, bg_color, font_size, mode);
 
 	// 显示小数点
-	TFT_Show_Char(x + int_len * char_width, y, '.', fg_color, bg_color, font_size, mode);
+	x += int_len * char_width;
+	TFT_Show_Char(x, y, '.', fg_color, bg_color, font_size, mode);
+	x += char_width;
 
-	// 显示小数部分 (两位，不足补零)
-	TFT_Show_Char(x + (int_len + 1) * char_width, y, (decimal_part / 10) + '0', fg_color, bg_color, font_size, mode);
-	TFT_Show_Char(x + (int_len + 2) * char_width, y, (decimal_part % 10) + '0', fg_color, bg_color, font_size, mode);
+	// 显示小数部分 (固定显示两位)
+	TFT_Show_Char(x, y, (decimal_part / 10) + '0', fg_color, bg_color, font_size, mode);
+	x += char_width;
+	TFT_Show_Char(x, y, (decimal_part % 10) + '0', fg_color, bg_color, font_size, mode);
 }
 
 /*
@@ -600,15 +698,22 @@ void TFT_Show_Picture(uint16_t x, uint16_t y, uint16_t width, uint16_t height, c
 
 	total_pixels = (uint32_t)width * height;
 
+	// 优化：如果启用了 DMA，并且数据量大，可以考虑一次性启动 DMA 传输整个图片数据
+	// 这需要 SPI DMA 支持内存到外设模式，并且 HAL 库提供了相应的函数
+	// 例如 HAL_SPI_Transmit_DMA(TFT_spi, (uint8_t*)pic_ptr, total_pixels * 2);
+	// 但需要确保 DMA 配置正确，并且在传输完成前不能有其他 SPI 操作
+
+	// 当前实现：逐个像素发送，利用 TFT_Write_Data16 内部的 DMA（如果启用）
 	for (i = 0; i < total_pixels; i++)
 	{
 		// 假设图片数据是高字节在前，低字节在后
-		TFT_Write_Data8(*pdata++); // 发送高字节
-		TFT_Write_Data8(*pdata++); // 发送低字节
-		// 如果图片数据是低字节在前，高字节在后，则交换顺序：
-		// uint8_t low_byte = *pdata++;
-		// uint8_t high_byte = *pdata++;
-		// TFT_Write_Data8(high_byte);
-		// TFT_Write_Data8(low_byte);
+		uint16_t color = ((uint16_t)pdata[0] << 8) | pdata[1];
+		TFT_Write_Data16(color);
+		pdata += 2;
+
+		// 如果图片数据是低字节在前，高字节在后:
+		// uint16_t color = pdata[0] | ((uint16_t)pdata[1] << 8);
+		// TFT_Write_Data16(color);
+		// pdata += 2;
 	}
 }
