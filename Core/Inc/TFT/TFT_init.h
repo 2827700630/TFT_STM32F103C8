@@ -1,24 +1,22 @@
 #ifndef __TFT_INIT_H
 #define __TFT_INIT_H
 #include "main.h"
+#include "spi.h" // 包含 spi.h 以获取 SPI_HandleTypeDef 类型
 #include <stdint.h>
 
 //----------- 显示方向设置 -----------
 // 控制LCD显示方向 (DISPLAY_DIRECTION)
-// ST7735S: 0=上下颠倒, 1=正常, 2=逆时针旋转90度, 3=顺时针旋转90度
-// ST7735R: 4=正常, 5=上下颠倒
-// 请根据实际使用的LCD型号和期望的显示方向选择合适的宏值
-#define DISPLAY_DIRECTION 4
+// 0: ST7735S 正常 (0度, 红板)
+// 1: ST7735S 旋转90度 (红板)
+// 2: ST7735S 旋转180度 (红板)
+// 3: ST7735S 旋转270度 (红板)
+// 4: ST7735R 正常 (0度, 黑板)
+// 5: ST7735R 旋转180度 (黑板)
+// 注意: ST7735S 通常是 BGR 颜色顺序, ST7735R 通常是 RGB 颜色顺序。
+//       MADCTL 命令会根据方向和型号进行调整。
+//       坐标偏移量 (TFT_Set_Address) 也可能需要根据具体屏幕微调。
+#define DISPLAY_DIRECTION 5 // 请根据实际使用的LCD型号和期望的显示方向选择合适的宏值
 //------------------------------------
-
-// 根据显示方向定义LCD逻辑宽高
-#if DISPLAY_DIRECTION == 0 || DISPLAY_DIRECTION == 1 || DISPLAY_DIRECTION == 4 || DISPLAY_DIRECTION == 5
-#define LCD_WIDTH 128  // 逻辑宽度
-#define LCD_HEIGHT 128 // 逻辑高度 (注意：此宏定义仅为逻辑尺寸，实际驱动中可能根据方向调整)
-#else                  // 方向 2 或 3 (旋转)
-#define LCD_WIDTH 128  // 逻辑宽度
-#define LCD_HEIGHT 128 // 逻辑高度
-#endif
 
 //----------------- TFT 控制引脚宏定义 -----------------
 // 使用HAL库函数简化引脚操作
@@ -58,13 +56,6 @@
 //----------------- TFT驱动函数声明 -----------------
 
 /**
- * @brief  通过SPI总线发送一个字节的数据
- * @param  data 要发送的字节
- * @retval 无
- */
-void TFT_Write_Bus(uint8_t data);
-
-/**
  * @brief  向TFT写入8位数据
  * @param  data 要写入的8位数据
  * @retval 无
@@ -92,32 +83,18 @@ void TFT_Write_Command(uint8_t command);
  * @param  x_end   列结束坐标
  * @param  y_end   行结束坐标
  * @retval 无
- * @note   坐标从0开始
+ * @note   坐标从0开始, 会根据 DISPLAY_DIRECTION 自动调整偏移。
  */
 void TFT_Set_Address(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end);
 
 /**
- * @brief  初始化ST7735S驱动芯片的TFT
- * @param  无
+ * @brief  通用 ST7735 初始化序列
+ * @param  hspi 指向 SPI_HandleTypeDef 结构的指针
  * @retval 无
- * @note   需要在本文件中配置好 DISPLAY_DIRECTION
+ * @note   此函数基于常见的 ST7735 初始化流程，并根据 DISPLAY_DIRECTION 调整 MADCTL。
+ *         适用于 ST7735S 和 ST7735R 变种。
+ *         伽马值等其他参数可能需要根据具体屏幕微调。
  */
-void TFT_Init_ST7735S(void);
-
-/**
- * @brief  初始化ST7735R驱动芯片的TFT
- * @param  无
- * @retval 无
- * @note   需要在本文件中配置好 DISPLAY_DIRECTION
- */
-void TFT_Init_ST7735R(void);
-
-/**
- * @brief  TFT通用初始化 (基于原TFT.c中的序列)
- * @param  无
- * @retval 无
- * @note   这是一个备用的初始化序列，可能适用于特定的ST7735变种或配置
- */
-void TFT_Init_Generic(void);
+void TFT_Init_ST7735(SPI_HandleTypeDef *hspi);
 
 #endif
