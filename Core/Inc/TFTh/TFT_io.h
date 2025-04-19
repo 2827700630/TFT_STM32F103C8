@@ -8,23 +8,9 @@
 #include "main.h"
 #include "spi.h" // 包含 spi.h 以获取 SPI_HandleTypeDef 类型
 #include <stdint.h>
-
-//----------- 显示方向设置 -----------
-// 控制LCD显示方向 (DISPLAY_DIRECTION)
-// 0: ST7735S 正常 (0度, 红板)
-// 1: ST7735S 旋转90度 (红板)
-// 2: ST7735S 旋转180度 (红板)
-// 3: ST7735S 旋转270度 (红板)
-// 4: ST7735R 正常 (0度, 黑板)
-// 5: ST7735R 旋转180度 (黑板)
-// 注意: ST7735S 通常是 BGR 颜色顺序, ST7735R 通常是 RGB 颜色顺序。
-//       MADCTL 命令会根据方向和型号进行调整。
-//       坐标偏移量 (TFT_Set_Address) 也可能需要根据具体屏幕微调。
-#define DISPLAY_DIRECTION 5 // 请根据实际使用的LCD型号和期望的显示方向选择合适的宏值
-//------------------------------------
+#include "TFT_config.h" // 包含配置文件，获取颜色定义等
 
 //----------------- TFT 控制引脚函数声明 -----------------
-// 这些函数需要在 tft_io.c 中根据具体硬件平台实现
 
 /**
  * @brief  控制复位引脚 (RES/RST)
@@ -54,22 +40,6 @@ void TFT_Pin_CS_Set(uint8_t state);
  */
 void TFT_Pin_BLK_Set(uint8_t state);
 
-//----------------- 常用颜色定义 (RGB565格式) -----------------
-#define WHITE 0xFFFF   // 白色
-#define BLACK 0x0000   // 黑色
-#define BLUE 0x001F    // 蓝色
-#define BRED 0XF81F    // 蓝红色 (洋红)
-#define GRED 0XFFE0    // 绿红色 (黄色)
-#define GBLUE 0X07FF   // 绿蓝色 (青色)
-#define RED 0xF800     // 红色
-#define MAGENTA 0xF81F // 品红色 (同 BRED)
-#define GREEN 0x07E0   // 绿色
-#define CYAN 0x7FFF    // 青色 (同 GBLUE)
-#define YELLOW 0xFFE0  // 黄色 (同 GRED)
-#define BROWN 0XBC40   // 棕色
-#define BRRED 0XFC07   // 棕红色
-#define GRAY 0X8430    // 灰色
-
 //----------------- TFT IO 函数声明 -----------------
 
 /**
@@ -78,13 +48,6 @@ void TFT_Pin_BLK_Set(uint8_t state);
  * @retval 无
  */
 void TFT_IO_Init(SPI_HandleTypeDef *hspi);
-
-/**
- * @brief  设置TFT驱动工作模式
- * @param  mode 0=正常操作模式，可使用DMA, 1=初始化模式，强制使用阻塞传输
- * @retval 无
- */
-void TFT_Set_Mode(uint8_t mode);
 
 /**
  * @brief  使用SPI发送缓冲区数据到TFT

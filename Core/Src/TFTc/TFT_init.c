@@ -13,9 +13,7 @@
 void TFT_Init_ST7735(SPI_HandleTypeDef *hspi)
 {
 	TFT_IO_Init(hspi); // 初始化 IO 层，传递 SPI 句柄
-	
-	// 初始化阶段强制使用阻塞式传输
-	TFT_Set_Mode(1);
+	// TFT_IO_Init 内部已将 tft_init_mode 设置为 1，无需再次调用 TFT_Set_Mode(1)
 
 	TFT_Pin_RES_Set(0); // 硬复位TFT (低)
 	HAL_Delay(100);
@@ -164,9 +162,6 @@ void TFT_Init_ST7735(SPI_HandleTypeDef *hspi)
 	// 17. 开启显示 (Display ON)
 	TFT_Write_Command(0x29); // DISPON
 	HAL_Delay(100);
-
-	// 初始化完成，切换到正常工作模式，允许使用DMA传输
-	TFT_Set_Mode(0);
 
 	// 初始化完成后，可以设置一次全屏地址，但这通常由绘图函数处理
 	// TFT_Set_Address(0, 0, TFT_WIDTH - 1, TFT_HEIGHT - 1); // 假设定义了 TFT_WIDTH 和 TFT_HEIGHT

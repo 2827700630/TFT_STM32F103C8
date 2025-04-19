@@ -2,8 +2,18 @@
 #define __TFT_H__
 
 #include "main.h"
-#include "TFTh/TFT_io.h"   // 包含 TFT_io.h 以使用底层函数和颜色定义
+#include "TFTh/TFT_io.h" // 包含 TFT_io.h 以使用底层函数和颜色定义
 #include <stdint.h>
+
+//----------------- 点结构体定义 -----------------
+/**
+ * @brief  结构体用于表示一个点的坐标
+ */
+typedef struct
+{
+    uint16_t x;
+    uint16_t y;
+} TFT_Point;
 
 //----------------- TFT 绘图函数声明 -----------------
 
@@ -26,6 +36,15 @@ void TFT_Fill_Area(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t 
  * @retval 无
  */
 void TFT_Draw_Point(uint16_t x, uint16_t y, uint16_t color);
+
+/**
+ * @brief  绘制多个点 (利用缓冲区加速)
+ * @param  points 点坐标数组
+ * @param  count  点的数量
+ * @param  color  点的颜色 (RGB565格式)
+ * @retval 无
+ */
+void TFT_Draw_MultiPoint(const TFT_Point points[], uint16_t count, uint16_t color);
 
 /**
  * @brief  快速绘制水平线
