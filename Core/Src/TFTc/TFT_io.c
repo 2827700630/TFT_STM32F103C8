@@ -40,7 +40,14 @@ static void TFT_Wait_DMA_Transfer_Complete(void); // 等待 DMA 传输完成
  */
 void TFT_Pin_RES_Set(uint8_t level)
 {
+#ifdef STM32HAL
 	HAL_GPIO_WritePin(TFT_RES_GPIO_Port, TFT_RES_Pin, (GPIO_PinState)level);
+#elif defined(SOME_OTHER_PLATFORM)
+	// 在此添加其他平台的 GPIO 控制代码
+	// 例如: OtherPlatform_GPIOWrite(TFT_RES_PIN, level);
+#else
+	#error "No platform defined for GPIO control in TFT_config.h"
+#endif
 }
 
 /**
@@ -49,7 +56,14 @@ void TFT_Pin_RES_Set(uint8_t level)
  */
 void TFT_Pin_DC_Set(uint8_t level)
 {
+#ifdef STM32HAL
 	HAL_GPIO_WritePin(TFT_DC_GPIO_Port, TFT_DC_Pin, (GPIO_PinState)level);
+#elif defined(SOME_OTHER_PLATFORM)
+	// 在此添加其他平台的 GPIO 控制代码
+	// 例如: OtherPlatform_GPIOWrite(TFT_DC_PIN, level);
+#else
+	#error "No platform defined for GPIO control in TFT_config.h"
+#endif
 }
 
 /**
@@ -58,7 +72,14 @@ void TFT_Pin_DC_Set(uint8_t level)
  */
 void TFT_Pin_CS_Set(uint8_t level)
 {
+#ifdef STM32HAL
 	HAL_GPIO_WritePin(TFT_CS_GPIO_Port, TFT_CS_Pin, (GPIO_PinState)level);
+#elif defined(SOME_OTHER_PLATFORM)
+	// 在此添加其他平台的 GPIO 控制代码
+	// 例如: OtherPlatform_GPIOWrite(TFT_CS_PIN, level);
+#else
+	#error "No platform defined for GPIO control in TFT_config.h"
+#endif
 }
 
 /**
@@ -68,7 +89,14 @@ void TFT_Pin_CS_Set(uint8_t level)
 void TFT_Pin_BLK_Set(uint8_t level)
 {
 	// 注意：某些屏幕背光可能是低电平点亮，需根据实际硬件调整
+#ifdef STM32HAL
 	HAL_GPIO_WritePin(TFT_BL_GPIO_Port, TFT_BL_Pin, (GPIO_PinState)level);
+#elif defined(SOME_OTHER_PLATFORM)
+	// 在此添加其他平台的 GPIO 控制代码
+	// 例如: OtherPlatform_GPIOWrite(TFT_BL_PIN, level);
+#else
+	#error "No platform defined for GPIO control in TFT_config.h"
+#endif
 }
 //--------------------------------------------------------------------------
 
@@ -170,6 +198,7 @@ void TFT_IO_Init(SPI_HandleTypeDef *hspi_ptr)
 		return;
 	}
 
+#ifdef STM32HAL
 	// 检查关联的 SPI 句柄是否配置了 DMA 发送通道
 	if (tft_spi_handle->hdmatx != NULL)
 	{
@@ -179,6 +208,14 @@ void TFT_IO_Init(SPI_HandleTypeDef *hspi_ptr)
 	{
 		is_dma_enabled = 0; // SPI 未配置 DMA 发送
 	}
+#elif defined(SOME_OTHER_PLATFORM)
+    // 在此添加其他平台的 DMA 配置检查逻辑
+    // is_dma_enabled = OtherPlatform_IsDmaEnabled(tft_spi_handle);
+    is_dma_enabled = 0; // 假设默认禁用 DMA，需要具体实现
+#else
+	#error "No platform defined for SPI/DMA initialization in TFT_config.h"
+#endif
+
 	is_dma_transfer_active = 0; // 初始化 DMA 传输状态标志
 	buffer_write_index = 0;		// 初始化缓冲区索引
 }
@@ -336,6 +373,7 @@ void TFT_Set_Address(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_
  * @param  hspi: 触发回调的 SPI 句柄指针
  * @retval None
  */
+#ifdef STM32HAL // 仅当使用 STM32 HAL 时编译此回调函数
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 {
 	// 检查是否是 TFT 使用的 SPI 实例触发的回调
@@ -356,3 +394,4 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 	// 如果系统中有其他设备也使用 SPI DMA，需要添加对其他 SPI 句柄的判断和处理
 	// else if (hspi == &other_spi_handle) { /* 处理其他设备的 DMA 完成事件 */ }
 }
+#endif // STM32HAL
