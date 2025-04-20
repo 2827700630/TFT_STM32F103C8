@@ -39,9 +39,9 @@ static void _TFT_Draw_Glyph(uint16_t x, uint16_t y, const uint8_t *glyph_data,
                 if (pixel_row >= height)
                     break; // 防止越界
 
-                // 关键修改：选择正确的位顺序（尝试两种方式）
-                bit = (byte >> (7 - row)) & 0x01; // 方式1：MSB在上（常见）
-                // bit = (byte >> row) & 0x01;           // 方式2：LSB在上
+                // 关键修改：选择正确的位顺序（尝试两种方式）左右翻转请修改它
+                // bit = (byte >> (7 - row)) & 0x01; // 方式1：MSB在上（常见）
+                bit = (byte >> row) & 0x01; // 方式2：LSB在上
 
                 if (bit)
                 {
