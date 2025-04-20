@@ -53,7 +53,7 @@ static void _TFT_Draw_Glyph(uint16_t x, uint16_t y, const uint8_t *glyph_data,
                 }
                 else
                 {
-                    TFT_Buffer_Write16(back_color); // 背景色// 透明模式（需硬件支持）
+                    // 透明模式（需硬件支持）
                 }
             }
         }
