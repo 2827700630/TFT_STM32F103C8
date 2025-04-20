@@ -153,7 +153,7 @@ void TFT_Demo_Screen1(void)
 void TFT_Demo_Screen2(void)
 {
     // 清屏为深蓝色
-    TFT_Fill_Area(&htft2, 0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, BLUE);
+    TFT_Fill_Area(&htft2, 0, 0, SCREEN_WIDTH , SCREEN_HEIGHT , BLUE);
     
     // 绘制标题
     TFT_Show_String(&htft2, 20, 5, (uint8_t *)"Screen #2", WHITE, BLUE, 16, 0);
