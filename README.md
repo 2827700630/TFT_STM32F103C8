@@ -8,6 +8,11 @@
     *   ST7735S (红板)
     *   ST7735R (黑板)
     *   包含通用初始化序列，可能适用于其他 ST7735 变种。
+*   **多屏幕支持**:
+    *   支持多个TFT屏幕同时显示不同内容
+    *   每个屏幕拥有独立的参数配置和缓冲区
+    *   可以指定不同的SPI接口和GPIO引脚
+    *   支持多种屏幕布局和显示模式
 *   **底层接口**:
     *   SPI 通信，支持 DMA 传输以提高效率。
     *   可配置的绘图缓冲区 (`TFT_BUFFER_SIZE` in `TFT_config.h`)。
@@ -175,6 +180,45 @@ Drivers/                # HAL 库和 CMSIS 文件
     TFT_Fill_Rectangle(20, 80, 100, 120, YELLOW);
     ```
 
+### 6. 多屏幕显示配置
+
+*   **声明多个TFT屏幕句柄**:
+    ```c
+    TFT_HandleTypeDef htft1; // 第一个TFT屏幕
+    TFT_HandleTypeDef htft2; // 第二个TFT屏幕
+    ```
+
+*   **初始化多个TFT屏幕**:
+    ```c
+    // 初始化第一个TFT屏幕
+    TFT_Init_Instance(&htft1, &hspi1, TFT1_CS_GPIO_Port, TFT1_CS_Pin);
+    TFT_Config_Pins(&htft1, TFT1_DC_GPIO_Port, TFT1_DC_Pin,
+                    TFT1_RES_GPIO_Port, TFT1_RES_Pin,
+                    TFT1_BL_GPIO_Port, TFT1_BL_Pin);
+    TFT_Config_Display(&htft1, 2, 2, 1); // 设置方向、X/Y偏移
+    TFT_IO_Init(&htft1); // 初始化IO层
+    TFT_Init_ST7735S(&htft1); // ST7735S屏幕初始化
+
+    // 初始化第二个TFT屏幕
+    TFT_Init_Instance(&htft2, &hspi2, TFT2_CS_GPIO_Port, TFT2_CS_Pin);
+    TFT_Config_Pins(&htft2, TFT2_DC_GPIO_Port, TFT2_DC_Pin,
+                    TFT2_RES_GPIO_Port, TFT2_RES_Pin,
+                    TFT2_BL_GPIO_Port, TFT2_BL_Pin);
+    TFT_Config_Display(&htft2, 2, 2, 1); // 设置方向、X/Y偏移
+    TFT_IO_Init(&htft2); // 初始化IO层
+    TFT_Init_ST7735S(&htft2); // ST7735S屏幕初始化
+    ```
+
+*   **操作多个屏幕**:
+    ```c
+    // 操作第一个屏幕
+    TFT_Fill_Screen(&htft1, BLACK);
+    TFT_Show_String(&htft1, 10, 10, (uint8_t *)"Screen 1", WHITE, BLACK, 16, 0);
+    
+    // 同时操作第二个屏幕
+    TFT_Fill_Screen(&htft2, BLUE);
+    TFT_Show_String(&htft2, 10, 10, (uint8_t *)"Screen 2", WHITE, BLUE, 16, 0);
+    ```
 
 ## 注意事项
 
@@ -183,9 +227,16 @@ Drivers/                # HAL 库和 CMSIS 文件
 *   **DMA**: 使用 DMA 可以显著提高大面积填充（如 `TFT_Fill_Area`, `TFT_Fill_Rectangle`）的效率。确保 CubeMX 中正确配置了 SPI TX DMA。
 *   **缓冲区**: `TFT_BUFFER_SIZE` 影响 DMA 传输效率和内存占用。如果内存紧张，可以适当减小此值，但可能会降低 DMA 性能。
 *   **阻塞与非阻塞**: 当前的 SPI 传输函数 (`TFT_Write_Data`, `TFT_Write_Cmd`, `TFT_Buffer_Write16`) 可能是阻塞的（等待传输完成）。如果需要非阻塞操作，需要修改 `TFT_io.c` 中的 SPI/DMA 调用方式并处理完成中断。
+*   **多屏共享SPI**: 如果多个屏幕共用一个SPI接口，需要确保操作不会产生冲突，驱动库会自动管理CS信号以确保正确的屏幕选择。
 
 ## 更新日志
 
+*   **2025/4/21**:
+    *   重构TFT驱动库，支持多屏同时显示功能
+    *   添加基于实例的TFT_HandleTypeDef结构体，每个屏幕可独立配置参数
+    *   实现设备注册和DMA中断智能处理机制
+    *   更新所有绘图函数支持多实例操作
+    *   优化内存管理，支持动态调整每个屏幕的缓冲区大小
 *   **2025/4/20**:
     *   更新 README，详细说明功能、使用方法、CubeMX 配置和 `TFT_config.h` 设置。
     *   完善硬件抽象层
