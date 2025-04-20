@@ -133,8 +133,71 @@ int main(void)
     // 边界碰撞检测
     if (rect_x <= 0 || rect_x + rect_w >= 128)
     {
+<<<<<<< Updated upstream
       rect_dx = -rect_dx; // X方向反向
       rect_x += rect_dx;  // 调整位置防止卡住
+=======
+      uint32_t current_tick = HAL_GetTick();
+      uint32_t elapsed_ms = current_tick - start_tick;
+
+      // 检查测试时间是否结束
+      if (elapsed_ms >= test_duration_ms)
+      {
+        test_running = false; // 停止测试
+        // 计算平均帧率
+        avg_fps = (float)frame_count * 1000.0f / elapsed_ms;
+
+        // 清屏并显示最终结果
+        TFT_Fill_Area(0, 0, 128, 160, BLACK);
+        TFT_Show_String(5, 5, (uint8_t *)"Test Finished!", GREEN, BLACK, 16, 0);
+        sprintf(fps_str, "Avg FPS: %.1f", avg_fps);
+        TFT_Show_String(5, 25, (uint8_t *)fps_str, YELLOW, BLACK, 16, 0);
+        sprintf(fps_str, "Frames: %lu", frame_count);
+        TFT_Show_String(5, 45, (uint8_t *)fps_str, WHITE, BLACK, 16, 0);
+        sprintf(fps_str, "Time: %lu ms", elapsed_ms);
+        TFT_Show_String(5, 65, (uint8_t *)fps_str, WHITE, BLACK, 16, 0);
+
+        // 进入停止状态，只闪烁LED
+        while (1)
+        {
+          HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+          HAL_Delay(500); // 慢速闪烁表示测试结束
+        }
+      }
+      else
+      {
+        // --- 动态图形绘制 (大面积更新) ---
+        // 1. 清除上一个大方块 (用背景色填充)
+        TFT_Fill_Area(pos_x, pos_y, pos_x + rect_size, pos_y + rect_size, BLACK);
+
+        // 2. 更新位置和颜色
+        pos_x = (pos_x + 3) % (128 - rect_size); // 在屏幕宽度内移动，留出方块宽度
+        if (frame_count % 30 == 0)
+        {                               // 每 30 帧改变一次颜色
+          rect_color = rand() % 0xFFFF; // 随机颜色
+        }
+
+        // 3. 绘制新的大方块
+        TFT_Fill_Area(pos_x, pos_y, pos_x + rect_size, pos_y + rect_size, rect_color);
+
+        // 4. 绘制一个简单的进度条指示测试时间
+        uint16_t progress_width = (uint16_t)(((float)elapsed_ms / test_duration_ms) * 128);
+        TFT_Fill_Area(0, 150, progress_width, 159, BLUE);   // 底部蓝色进度条
+        TFT_Fill_Area(progress_width, 150, 128, 159, GRAY); // 剩余部分灰色
+
+        // 5. 显示实时帧数 (会稍微影响性能，但有助于观察)
+        sprintf(frame_str, "Frame: %lu", frame_count);
+        // 在一个固定区域显示帧数，使用背景色覆盖旧的数字
+        TFT_Show_String(5, 130, (uint8_t *)frame_str, MAGENTA, BLACK, 16, 0);
+
+        // --- 动态图形绘制结束 ---
+
+        frame_count++; // 帧计数增加
+
+        // LED闪烁表示程序运行
+        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+      }
+>>>>>>> Stashed changes
     }
     if (rect_y <= 0 || rect_y + rect_h >= 160)
     {
