@@ -143,7 +143,7 @@ void TFT_Init_ST7735S(TFT_HandleTypeDef *htft)
 
 	// 17. 打开显示
 	TFT_Write_Command(htft, 0x29); // Display ON
-	 HAL_Delay(20);
+	HAL_Delay(20);
 }
 
 /**
@@ -173,13 +173,13 @@ static void TFT_Set_Direction(TFT_HandleTypeDef *htft, uint8_t direction)
 	switch (direction)
 	{
 	case 0:							 // 0度旋转
-		TFT_Write_Data8(htft, 0xC0); // MY=1, MX=1, MV=0, RGB
+		TFT_Write_Data8(htft, 0x00); // MY=0, MX=0, MV=0, RGB
 		break;
 	case 1:							 // 90度旋转
 		TFT_Write_Data8(htft, 0xA0); // MY=1, MX=0, MV=1, RGB
 		break;
 	case 2:							 // 180度旋转
-		TFT_Write_Data8(htft, 0x00); // MY=0, MX=0, MV=0, RGB
+		TFT_Write_Data8(htft, 0xC0); // MY=1, MX=1, MV=0, RGB
 		break;
 	case 3:							 // 270度旋转
 		TFT_Write_Data8(htft, 0x60); // MY=0, MX=1, MV=1, RGB
@@ -190,105 +190,129 @@ static void TFT_Set_Direction(TFT_HandleTypeDef *htft, uint8_t direction)
 	}
 }
 
-
-void LCD_ST7789V3_Init(void)
+/**
+ * @brief  ST7789v3初始化函数，支持多实例
+ * @param  htft TFT句柄指针
+ * @retval 无
+ * @note   适用于ST7789v3驱动的TFT屏幕，240x240分辨率
+ */
+void TFT_Init_ST7789v3(TFT_HandleTypeDef *htft)
 {
+	// 1. 初始化底层IO（GPIO/SPI等）
+	TFT_IO_Init(htft);
 
-	LCD_RES_Clr(); // 复位
-	HAL_Delay(100);
-	LCD_RES_Set();
-	HAL_Delay(100);
+	// 2. 硬件复位流程
+	TFT_Pin_RES_Set(htft, 0); // 拉低复位引脚
+	HAL_Delay(100);			  // 保持100ms低电平
+	TFT_Pin_RES_Set(htft, 1); // 释放复位引脚
+	HAL_Delay(100);			  // 等待复位完成
 
-	LCD_BLK_Set(); // 打开背光
-	HAL_Delay(100);
+	TFT_Pin_BLK_Set(htft, 1); // 开启背光
+	HAL_Delay(100);			  // 背光稳定时间
 
-	LCD_WR_REG(0x01); // Software Reset
-	HAL_Delay(120);
+	// 3. 发送软件复位命令
+	TFT_Write_Command(htft, 0x01); // 软件复位
+	HAL_Delay(120);				   // 等待复位完成
 
-	//************* Start Initial Sequence **********//
-	LCD_WR_REG(0x11); // Sleep out
-	HAL_Delay(120);	  // Delay 120ms
-	//************* Start Initial Sequence **********//
-	LCD_WR_REG(0x36);
-	if (USE_HORIZONTAL == 0)
-		LCD_WR_DATA8(0x00);
-	else if (USE_HORIZONTAL == 1)
-		LCD_WR_DATA8(0xC0);
-	else if (USE_HORIZONTAL == 2)
-		LCD_WR_DATA8(0x70);
-	else
-		LCD_WR_DATA8(0xA0);
+	// 4. 退出睡眠模式
+	TFT_Write_Command(htft, 0x11); // 退出睡眠模式(Sleep OUT)
+	HAL_Delay(120);				   // 等待唤醒完成
 
-	LCD_WR_REG(0x3A);
-	LCD_WR_DATA8(0x05);
+	// 5. 设置屏幕显示方向
+	TFT_Set_Direction(htft, htft->display_direction);
 
-	LCD_WR_REG(0xB2);
-	LCD_WR_DATA8(0x0c);
-	LCD_WR_DATA8(0x0c);
-	LCD_WR_DATA8(0x00);
-	LCD_WR_DATA8(0x33);
-	LCD_WR_DATA8(0x33);
+	// 6. 设置像素格式为16位RGB565
+	TFT_Write_Command(htft, 0x3A); // 像素格式设置命令
+	TFT_Write_Data8(htft, 0x05);   // 0x05表示16位/pixel
 
-	LCD_WR_REG(0xB7);
-	LCD_WR_DATA8(0x72);
+	// 7. 设置Porch控制（帧同步信号）
+	TFT_Write_Command(htft, 0xB2); // Porch设置命令
+	TFT_Write_Data8(htft, 0x0C);   // 前廊
+	TFT_Write_Data8(htft, 0x0C);   // 后廊
+	TFT_Write_Data8(htft, 0x00);   // 空闲模式
+	TFT_Write_Data8(htft, 0x33);   // 行同步
+	TFT_Write_Data8(htft, 0x33);   // 帧同步
 
-	LCD_WR_REG(0xBB);
-	LCD_WR_DATA8(0x3d); // 2b
+	// 8. 设置Gate控制
+	TFT_Write_Command(htft, 0xB7); // Gate控制命令
+	TFT_Write_Data8(htft, 0x72);   // 具体参数见数据手册
 
-	LCD_WR_REG(0xC0);
-	LCD_WR_DATA8(0x2C);
+	// 9. 设置VCOM电压
+	TFT_Write_Command(htft, 0xBB); // VCOM设置
+	TFT_Write_Data8(htft, 0x3D);   // VCOM电压值
 
-	LCD_WR_REG(0xC2);
-	LCD_WR_DATA8(0x01);
+	// 10. 设置LCM控制
+	TFT_Write_Command(htft, 0xC0); // LCM控制命令
+	TFT_Write_Data8(htft, 0x2C);   // 具体参数
 
-	LCD_WR_REG(0xC3);
-	LCD_WR_DATA8(0x19);
+	// 11. 设置VDV和VRH命令使能
+	TFT_Write_Command(htft, 0xC2); // VDV/VRH控制
+	TFT_Write_Data8(htft, 0x01);   // 使能
 
-	LCD_WR_REG(0xC4);
-	LCD_WR_DATA8(0x20); // VDV, 0x20:0v
+	// 12. 设置VRH电压
+	TFT_Write_Command(htft, 0xC3); // VRH设置
+	TFT_Write_Data8(htft, 0x19);   // VRH电压值
 
-	LCD_WR_REG(0xC6);
-	LCD_WR_DATA8(0x0f); // 0x13:60Hz
+	// 13. 设置VDV电压
+	TFT_Write_Command(htft, 0xC4); // VDV设置
+	TFT_Write_Data8(htft, 0x20);   // VDV电压值
 
-	LCD_WR_REG(0xD0);
-	LCD_WR_DATA8(0xA4);
-	LCD_WR_DATA8(0xA1);
+	// 14. 设置正常模式下的帧率控制
+	TFT_Write_Command(htft, 0xC6); // 帧率控制
 
-	LCD_WR_REG(0xD6);
-	LCD_WR_DATA8(0xA1); // sleep in后，gate输出为GND
+	// TFT_Write_Data8(htft, 0x00); // 119Hz刷新率
+	TFT_Write_Data8(htft, 0x05); // 90Hz刷新率
+	// TFT_Write_Data8(htft, 0x0F);   // 60Hz刷新率
+	
+	// 15. 设置电源控制1
+	TFT_Write_Command(htft, 0xD0); // 电源控制1
+	TFT_Write_Data8(htft, 0xA4);   // 参数1
+	TFT_Write_Data8(htft, 0xA1);   // 参数2
 
-	LCD_WR_REG(0xE0);
-	LCD_WR_DATA8(0xD0);
-	LCD_WR_DATA8(0x04);
-	LCD_WR_DATA8(0x0D);
-	LCD_WR_DATA8(0x11);
-	LCD_WR_DATA8(0x13);
-	LCD_WR_DATA8(0x2B);
-	LCD_WR_DATA8(0x3F);
-	LCD_WR_DATA8(0x54);
-	LCD_WR_DATA8(0x4C);
-	LCD_WR_DATA8(0x18);
-	LCD_WR_DATA8(0x0D);
-	LCD_WR_DATA8(0x0B);
-	LCD_WR_DATA8(0x1F);
-	LCD_WR_DATA8(0x23);
-	/* 电压设置 */
-	LCD_WR_REG(0xE1);
-	LCD_WR_DATA8(0xD0);
-	LCD_WR_DATA8(0x04);
-	LCD_WR_DATA8(0x0C);
-	LCD_WR_DATA8(0x11);
-	LCD_WR_DATA8(0x13);
-	LCD_WR_DATA8(0x2C);
-	LCD_WR_DATA8(0x3F);
-	LCD_WR_DATA8(0x44);
-	LCD_WR_DATA8(0x51);
-	LCD_WR_DATA8(0x2F);
-	LCD_WR_DATA8(0x1F);
-	LCD_WR_DATA8(0x1F);
-	LCD_WR_DATA8(0x20);
-	LCD_WR_DATA8(0x23);
-	/* 显示开 */
-	LCD_WR_REG(0x21);
-	LCD_WR_REG(0x29);
+	// 16. 设置Gate控制2
+	TFT_Write_Command(htft, 0xD6); // Gate控制2
+	TFT_Write_Data8(htft, 0xA1);   // 睡眠模式下Gate输出GND
+
+	// 17. 正极性伽马校正
+	TFT_Write_Command(htft, 0xE0); // 正伽马校正
+	TFT_Write_Data8(htft, 0xD0);   // 伽马值1
+	TFT_Write_Data8(htft, 0x04);   // 伽马值2
+	/* 后续14个伽马校正参数 */
+	TFT_Write_Data8(htft, 0x0D);
+	TFT_Write_Data8(htft, 0x11);
+	TFT_Write_Data8(htft, 0x13);
+	TFT_Write_Data8(htft, 0x2B);
+	TFT_Write_Data8(htft, 0x3F);
+	TFT_Write_Data8(htft, 0x54);
+	TFT_Write_Data8(htft, 0x4C);
+	TFT_Write_Data8(htft, 0x18);
+	TFT_Write_Data8(htft, 0x0D);
+	TFT_Write_Data8(htft, 0x0B);
+	TFT_Write_Data8(htft, 0x1F);
+	TFT_Write_Data8(htft, 0x23);
+
+	// 18. 负极性伽马校正
+	TFT_Write_Command(htft, 0xE1); // 负伽马校正
+	TFT_Write_Data8(htft, 0xD0);   // 伽马值1
+	TFT_Write_Data8(htft, 0x04);   // 伽马值2
+	/* 后续14个伽马校正参数 */
+	TFT_Write_Data8(htft, 0x0C);
+	TFT_Write_Data8(htft, 0x11);
+	TFT_Write_Data8(htft, 0x13);
+	TFT_Write_Data8(htft, 0x2C);
+	TFT_Write_Data8(htft, 0x3F);
+	TFT_Write_Data8(htft, 0x44);
+	TFT_Write_Data8(htft, 0x51);
+	TFT_Write_Data8(htft, 0x2F);
+	TFT_Write_Data8(htft, 0x1F);
+	TFT_Write_Data8(htft, 0x1F);
+	TFT_Write_Data8(htft, 0x20);
+	TFT_Write_Data8(htft, 0x23);
+
+	// 19. 开启显示反转（可选）
+	TFT_Write_Command(htft, 0x21); // 显示反转ON
+
+	// 20. 开启显示
+	TFT_Write_Command(htft, 0x29); // 显示ON
+	HAL_Delay(20);				   // 等待显示稳定
 }

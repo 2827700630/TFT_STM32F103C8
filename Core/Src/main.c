@@ -82,7 +82,7 @@ int main(void)
   /* USER CODE BEGIN 1 */
   uint16_t rect_size = 60; // 增大矩形尺寸
   uint16_t pos_x = 0;
-  uint16_t pos_y = 50; // 调整 Y 坐标以适应更大的矩形
+  uint16_t pos_y = 70; // 调整 Y 坐标以适应更大的矩形
   uint16_t rect_color = RED;
   char frame_str[20]; // 用于显示实时帧数
   /* USER CODE END 1 */
@@ -114,13 +114,23 @@ int main(void)
   TFT_Config_Pins(&htft1, TFT_DC_GPIO_Port, TFT_DC_Pin,
                   TFT_RES_GPIO_Port, TFT_RES_Pin,
                   TFT_BL_GPIO_Port, TFT_BL_Pin);
-  TFT_Config_Display(&htft1, 0, 2, 1);          // 设置方向、X/Y偏移
+  TFT_Config_Display(&htft1, 0, 0, 0);          // 设置方向、X/Y偏移
   TFT_IO_Init(&htft1);                          // 初始化IO层
-  TFT_Init_ST7735S(&htft1);                     // ST7735S屏幕初始化
-  TFT_Fill_Area(&htft1, 0, 0, 128, 160, BLACK); // 清屏为黑色背景
+  TFT_Init_ST7789v3(&htft1);                    // ST7735S屏幕初始化
+  TFT_Fill_Area(&htft1, 0, 0, 240, 320, BLACK); // 清屏为黑色背景
 
-  TFT_Show_String(&htft1, 5, 5, (uint8_t *)"FPS Test Run", WHITE, BLACK, 16, 0);
-  TFT_Show_String(&htft1, 5, 25, (uint8_t *)"Large Area", CYAN, BLACK, 16, 0);
+  TFT_Show_String(&htft1, 5, 25, (uint8_t *)"FPS Test Run", WHITE, BLACK, 16, 0);
+  TFT_Show_String(&htft1, 5, 45, (uint8_t *)"Large Area", CYAN, BLACK, 16, 0);
+
+  // 初始化第二个TFT屏幕
+  TFT_Init_Instance(&htft2, &hspi1, CS2_GPIO_Port, CS2_Pin); // 第二个屏幕使用同一SPI接口
+  TFT_Config_Pins(&htft2, DC2_GPIO_Port, DC2_Pin,RES2_GPIO_Port, RES2_Pin, BL2_GPIO_Port, BL2_Pin);
+  TFT_Config_Display(&htft2, 2, 2, 1); // 设置方向、X/Y偏移
+  TFT_IO_Init(&htft2);
+  TFT_Init_ST7735S(&htft2);
+  TFT_Fill_Area(&htft2, 0, 0, 128, 160, BLACK); // 清屏为黑色背景
+  TFT_Show_String(&htft2, 5, 5, (uint8_t *)"FPS Test Run", WHITE, BLACK, 16, 0);
+  TFT_Show_String(&htft2, 5, 25, (uint8_t *)"Large Area", CYAN, BLACK, 16, 0);
 
   start_tick = HAL_GetTick(); // 获取测试开始时间
   frame_count = 0;
