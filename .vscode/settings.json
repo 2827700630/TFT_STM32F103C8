@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "lcd.h": "c"
+        "lcd.h": "c",
+        "tft_init.h": "c"
     }
 }

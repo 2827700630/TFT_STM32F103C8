@@ -263,7 +263,7 @@ void TFT_Init_ST7789v3(TFT_HandleTypeDef *htft)
 	// TFT_Write_Data8(htft, 0x00); // 119Hz刷新率
 	TFT_Write_Data8(htft, 0x05); // 90Hz刷新率
 	// TFT_Write_Data8(htft, 0x0F);   // 60Hz刷新率
-	
+
 	// 15. 设置电源控制1
 	TFT_Write_Command(htft, 0xD0); // 电源控制1
 	TFT_Write_Data8(htft, 0xA4);   // 参数1
