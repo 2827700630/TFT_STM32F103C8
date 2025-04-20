@@ -100,6 +100,52 @@ void TFT_Pin_BLK_Set(uint8_t level)
 }
 //--------------------------------------------------------------------------
 
+//----------------- 平台相关的 SPI 传输函数实现 -----------------
+
+/**
+ * @brief  平台相关的阻塞式 SPI 发送函数
+ * @param  spi_handle 平台相关的 SPI 句柄指针
+ * @param  pData      要发送的数据缓冲区指针
+ * @param  Size       要发送的数据大小 (字节)
+ * @param  Timeout    超时时间 (平台相关定义)
+ * @retval 平台相关的状态码 (例如 HAL_StatusTypeDef)
+ */
+int TFT_Platform_SPI_Transmit_Blocking(SPI_HandleTypeDef *spi_handle, uint8_t *pData, uint16_t Size, uint32_t Timeout)
+{
+#ifdef STM32HAL
+    return HAL_SPI_Transmit(spi_handle, pData, Size, Timeout);
+#elif defined(SOME_OTHER_PLATFORM)
+    // 在此添加其他平台的阻塞式 SPI 发送代码
+    // return OtherPlatform_SPISendBlocking(spi_handle, pData, Size, Timeout);
+    return -1; // Placeholder error
+#else
+	#error "No platform defined for SPI blocking transmit in TFT_config.h"
+    return -1; // Return error code
+#endif
+}
+
+/**
+ * @brief  平台相关的启动 SPI DMA 发送函数
+ * @param  spi_handle 平台相关的 SPI 句柄指针
+ * @param  pData      要发送的数据缓冲区指针
+ * @param  Size       要发送的数据大小 (字节)
+ * @retval 平台相关的状态码 (例如 HAL_StatusTypeDef)
+ * @note   此函数应启动传输但不等待完成。完成由回调处理。
+ */
+int TFT_Platform_SPI_Transmit_DMA_Start(SPI_HandleTypeDef *spi_handle, uint8_t *pData, uint16_t Size)
+{
+#ifdef STM32HAL
+    return HAL_SPI_Transmit_DMA(spi_handle, pData, Size);
+#elif defined(SOME_OTHER_PLATFORM)
+    // 在此添加其他平台的启动 DMA SPI 发送代码
+    // return OtherPlatform_SPISendDMAStart(spi_handle, pData, Size);
+    return -1; // Placeholder error
+#else
+	#error "No platform defined for SPI DMA transmit in TFT_config.h"
+    return -1; // Return error code
+#endif
+}
+
 //----------------- TFT SPI 通信与缓冲区管理函数实现 -----------------
 
 /**
@@ -122,8 +168,8 @@ void TFT_SPI_Send(uint8_t *data_buffer, uint16_t length, uint8_t wait_completion
 	if (is_dma_enabled) // 如果启用了 DMA
 	{
 		is_dma_transfer_active = 1; // 设置 DMA 忙标志
-		// 启动 SPI DMA 传输
-		HAL_SPI_Transmit_DMA(tft_spi_handle, data_buffer, length);
+		// 启动 SPI DMA 传输 (使用平台抽象函数)
+		TFT_Platform_SPI_Transmit_DMA_Start(tft_spi_handle, data_buffer, length);
 		// 如果需要等待完成，则在此处等待
 		if (wait_completion)
 		{
@@ -134,7 +180,8 @@ void TFT_SPI_Send(uint8_t *data_buffer, uint16_t length, uint8_t wait_completion
 	}
 	else // 如果未使用 DMA，使用阻塞式 SPI 传输
 	{
-		HAL_SPI_Transmit(tft_spi_handle, data_buffer, length, HAL_MAX_DELAY); // 使用最大超时时间
+		// 使用平台抽象的阻塞式发送函数
+        TFT_Platform_SPI_Transmit_Blocking(tft_spi_handle, data_buffer, length, HAL_MAX_DELAY); // 使用最大超时时间
 		TFT_Pin_CS_Set(1); // 阻塞传输完成后立即拉高片选
 	}
 }
@@ -256,8 +303,8 @@ void TFT_Write_Data8(uint8_t data)
 	TFT_Pin_DC_Set(1);	 // 确保是数据模式
 	TFT_Pin_CS_Set(0);	 // 片选选中
 
-	// 使用阻塞式发送单个字节
-	HAL_SPI_Transmit(tft_spi_handle, &data, 1, HAL_MAX_DELAY);
+	// 使用平台抽象的阻塞式发送单个字节
+	TFT_Platform_SPI_Transmit_Blocking(tft_spi_handle, &data, 1, HAL_MAX_DELAY);
 
 	TFT_Pin_CS_Set(1);	 // 传输完成后拉高 CS
 }
@@ -281,8 +328,8 @@ void TFT_Write_Data16(uint16_t data)
 	TFT_Pin_DC_Set(1);	 // 数据模式
 	TFT_Pin_CS_Set(0);	 // 片选选中
 
-	// 使用阻塞式发送 2 个字节
-	HAL_SPI_Transmit(tft_spi_handle, spi_data, 2, HAL_MAX_DELAY);
+	// 使用平台抽象的阻塞式发送 2 个字节
+	TFT_Platform_SPI_Transmit_Blocking(tft_spi_handle, spi_data, 2, HAL_MAX_DELAY);
 
 	TFT_Pin_CS_Set(1);	 // 传输完成后拉高 CS
 }
@@ -306,8 +353,8 @@ void TFT_Write_Command(uint8_t command)
 	TFT_Pin_DC_Set(0);	 // 设置为命令模式
 	TFT_Pin_CS_Set(0);	 // 片选选中
 
-	// 使用阻塞式发送命令字节
-	HAL_SPI_Transmit(tft_spi_handle, &command, 1, HAL_MAX_DELAY);
+	// 使用平台抽象的阻塞式发送命令字节
+	TFT_Platform_SPI_Transmit_Blocking(tft_spi_handle, &command, 1, HAL_MAX_DELAY);
 
 	TFT_Pin_CS_Set(1);	 // 命令发送完成后立即拉高 CS
 }
@@ -365,6 +412,7 @@ void TFT_Set_Address(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_
 
 //----------------- HAL SPI DMA 回调函数 -----------------
 
+#ifdef STM32HAL // 仅当使用 STM32 HAL 时编译此回调函数
 /**
  * @brief  SPI DMA 发送完成回调函数
  * @note   此函数由 STM32 HAL 库在 SPI DMA 发送完成后自动调用。
@@ -373,7 +421,6 @@ void TFT_Set_Address(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_
  * @param  hspi: 触发回调的 SPI 句柄指针
  * @retval None
  */
-#ifdef STM32HAL // 仅当使用 STM32 HAL 时编译此回调函数
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 {
 	// 检查是否是 TFT 使用的 SPI 实例触发的回调

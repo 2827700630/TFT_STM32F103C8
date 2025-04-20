@@ -18,7 +18,7 @@
  * 这将用于在 TFT_io.c 中选择正确的底层 GPIO 和 SPI 函数。
  */
 #define STM32HAL // 使用 STM32 HAL 库
-// #define SOME_OTHER_PLATFORM // 示例：用于其他平台
+// #define SOME_OTHER_PLATFORM // 示例：用于其他平台（还没做）
 
 /*-----------------------------------------------------------------------------*/
 /* TFT Driver Configuration                                                    */
