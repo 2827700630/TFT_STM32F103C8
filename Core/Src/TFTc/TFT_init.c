@@ -5,7 +5,6 @@
 #include "TFTh/TFT_init.h"
 #include <stdint.h>
 
-
 /**
  * @brief  通用 ST7735 初始化序列
  * @param  hspi 指向 SPI_HandleTypeDef 结构的指针
@@ -88,28 +87,37 @@ void TFT_Init_ST7735(SPI_HandleTypeDef *hspi)
 
 	// 13. 设置内存访问控制 (Memory Access Control - MADCTL)
 	TFT_Write_Command(0x36);
-    // MADCTL 位标志: MY MX MV ML RGB MH - -
-    // MY: 行地址顺序 (0=从上到下, 1=从下到上)
-    // MX: 列地址顺序 (0=从左到右, 1=从右到左)
-    // MV: 行/列交换 (0=正常, 1=交换)
-    // ML: 垂直刷新顺序 (0=从上到下, 1=从下到上)
-    // RGB: 颜色顺序 (0=RGB, 1=BGR)
-    // MH: 水平刷新顺序 (0=从左到右, 1=从右到左)
-#if DISPLAY_DIRECTION == 0	 // ST7735S 正常 (0度, 红板, BGR)
-	TFT_Write_Data8(0x08);	 // MY=0, MX=0, MV=0, ML=0, RGB=1, MH=0
-#elif DISPLAY_DIRECTION == 1 // ST7735S 旋转90度 (红板, BGR)
-	TFT_Write_Data8(0x68); // MY=0, MX=1, MV=1, ML=0, RGB=1, MH=0
-#elif DISPLAY_DIRECTION == 2 // ST7735S 旋转180度 (红板, BGR)
-	TFT_Write_Data8(0xC8); // MY=1, MX=1, MV=0, ML=0, RGB=1, MH=0
-#elif DISPLAY_DIRECTION == 3 // ST7735S 旋转270度 (红板, BGR)
-	TFT_Write_Data8(0xA8); // MY=1, MX=0, MV=1, ML=0, RGB=1, MH=0
-#elif DISPLAY_DIRECTION == 4 // ST7735R 正常 (0度, 黑板, RGB)
+	// MADCTL 位标志: MY MX MV ML RGB MH - -
+	// MY: 行地址顺序 (0=从上到下, 1=从下到上)
+	// MX: 列地址顺序 (0=从左到右, 1=从右到左)
+	// MV: 行/列交换 (0=正常, 1=交换)
+	// ML: 垂直刷新顺序 (0=从上到下, 1=从下到上)
+	// RGB: 颜色顺序 (0=RGB, 1=BGR)
+	// MH: 水平刷新顺序 (0=从左到右, 1=从右到左)
+#if DISPLAY_DIRECTION == 0 // 正常方向 (0°旋转)
+#if defined(USE_ST7735R)   // 黑板
 	TFT_Write_Data8(0x00); // MY=0, MX=0, MV=0, ML=0, RGB=0, MH=0
-#elif DISPLAY_DIRECTION == 5 // ST7735R 旋转180度 (黑板, RGB)
+#else					   // ST7735S 红板
+	TFT_Write_Data8(0x08); // MY=0, MX=0, MV=0, ML=0, RGB=1, MH=0
+#endif
+#elif DISPLAY_DIRECTION == 1 // 顺时针旋转90度
+#if defined(USE_ST7735R)	 // 黑板
+	TFT_Write_Data8(0x60); // MY=0, MX=1, MV=1, ML=0, RGB=0, MH=0
+#else						 // ST7735S 红板
+	TFT_Write_Data8(0x68); // MY=0, MX=1, MV=1, ML=0, RGB=1, MH=0
+#endif
+#elif DISPLAY_DIRECTION == 2 // 顺时针旋转180度
+#if defined(USE_ST7735R)	 // 黑板
 	TFT_Write_Data8(0xC0); // MY=1, MX=1, MV=0, ML=0, RGB=0, MH=0
-	// 注意: ST7735R 的 90/270 度旋转可能需要不同的 MADCTL 值，这里未列出
-	// 例如 90度: 0x60 (MY=0,MX=1,MV=1,RGB=0)
-	// 例如 270度: 0xA0 (MY=1,MX=0,MV=1,RGB=0)
+#else						 // ST7735S 红板
+	TFT_Write_Data8(0xC8); // MY=1, MX=1, MV=0, ML=0, RGB=1, MH=0
+#endif
+#elif DISPLAY_DIRECTION == 3 // 顺时针旋转270度
+#if defined(USE_ST7735R)	 // 黑板
+	TFT_Write_Data8(0xA0); // MY=1, MX=0, MV=1, ML=0, RGB=0, MH=0
+#else						 // ST7735S 红板
+	TFT_Write_Data8(0xA8); // MY=1, MX=0, MV=1, ML=0, RGB=1, MH=0
+#endif
 #else
 #error "Invalid DISPLAY_DIRECTION defined in TFT_io.h"
 #endif

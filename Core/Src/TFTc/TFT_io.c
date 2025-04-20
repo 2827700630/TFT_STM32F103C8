@@ -16,7 +16,6 @@
 因此，本驱动采用较小的发送缓冲区结合 DMA (如果可用) 来优化性能。
 */
 
-
 // --- 内部变量 ---
 static uint8_t tft_tx_buffer[TFT_BUFFER_SIZE]; // SPI 发送缓冲区 (Transmit Buffer)
 static uint16_t buffer_write_index = 0;		   // 当前缓冲区写入位置索引
@@ -47,7 +46,7 @@ void TFT_Pin_RES_Set(uint8_t level)
 	// 在此添加其他平台的 GPIO 控制代码
 	// 例如: OtherPlatform_GPIOWrite(TFT_RES_PIN, level);
 #else
-	#error "No platform defined for GPIO control in TFT_config.h"
+#error "No platform defined for GPIO control in TFT_config.h"
 #endif
 }
 
@@ -63,7 +62,7 @@ void TFT_Pin_DC_Set(uint8_t level)
 	// 在此添加其他平台的 GPIO 控制代码
 	// 例如: OtherPlatform_GPIOWrite(TFT_DC_PIN, level);
 #else
-	#error "No platform defined for GPIO control in TFT_config.h"
+#error "No platform defined for GPIO control in TFT_config.h"
 #endif
 }
 
@@ -79,7 +78,7 @@ void TFT_Pin_CS_Set(uint8_t level)
 	// 在此添加其他平台的 GPIO 控制代码
 	// 例如: OtherPlatform_GPIOWrite(TFT_CS_PIN, level);
 #else
-	#error "No platform defined for GPIO control in TFT_config.h"
+#error "No platform defined for GPIO control in TFT_config.h"
 #endif
 }
 
@@ -96,7 +95,7 @@ void TFT_Pin_BLK_Set(uint8_t level)
 	// 在此添加其他平台的 GPIO 控制代码
 	// 例如: OtherPlatform_GPIOWrite(TFT_BL_PIN, level);
 #else
-	#error "No platform defined for GPIO control in TFT_config.h"
+#error "No platform defined for GPIO control in TFT_config.h"
 #endif
 }
 //--------------------------------------------------------------------------
@@ -114,14 +113,14 @@ void TFT_Pin_BLK_Set(uint8_t level)
 int TFT_Platform_SPI_Transmit_Blocking(SPI_HandleTypeDef *spi_handle, uint8_t *pData, uint16_t Size, uint32_t Timeout)
 {
 #ifdef STM32HAL
-    return HAL_SPI_Transmit(spi_handle, pData, Size, Timeout);
+	return HAL_SPI_Transmit(spi_handle, pData, Size, Timeout);
 #elif defined(SOME_OTHER_PLATFORM)
-    // 在此添加其他平台的阻塞式 SPI 发送代码
-    // return OtherPlatform_SPISendBlocking(spi_handle, pData, Size, Timeout);
-    return -1; // Placeholder error
+	// 在此添加其他平台的阻塞式 SPI 发送代码
+	// return OtherPlatform_SPISendBlocking(spi_handle, pData, Size, Timeout);
+	return -1; // Placeholder error
 #else
-	#error "No platform defined for SPI blocking transmit in TFT_config.h"
-    return -1; // Return error code
+#error "No platform defined for SPI blocking transmit in TFT_config.h"
+	return -1; // Return error code
 #endif
 }
 
@@ -136,14 +135,14 @@ int TFT_Platform_SPI_Transmit_Blocking(SPI_HandleTypeDef *spi_handle, uint8_t *p
 int TFT_Platform_SPI_Transmit_DMA_Start(SPI_HandleTypeDef *spi_handle, uint8_t *pData, uint16_t Size)
 {
 #ifdef STM32HAL
-    return HAL_SPI_Transmit_DMA(spi_handle, pData, Size);
+	return HAL_SPI_Transmit_DMA(spi_handle, pData, Size);
 #elif defined(SOME_OTHER_PLATFORM)
-    // 在此添加其他平台的启动 DMA SPI 发送代码
-    // return OtherPlatform_SPISendDMAStart(spi_handle, pData, Size);
-    return -1; // Placeholder error
+	// 在此添加其他平台的启动 DMA SPI 发送代码
+	// return OtherPlatform_SPISendDMAStart(spi_handle, pData, Size);
+	return -1; // Placeholder error
 #else
-	#error "No platform defined for SPI DMA transmit in TFT_config.h"
-    return -1; // Return error code
+#error "No platform defined for SPI DMA transmit in TFT_config.h"
+	return -1; // Return error code
 #endif
 }
 
@@ -175,15 +174,15 @@ void TFT_SPI_Send(uint8_t *data_buffer, uint16_t length, uint8_t wait_completion
 		if (wait_completion)
 		{
 			TFT_Wait_DMA_Transfer_Complete(); // 等待 DMA 完成
-			TFT_Pin_CS_Set(1); // DMA 完成后手动拉高片选
+			TFT_Pin_CS_Set(1);				  // DMA 完成后手动拉高片选
 		}
 		// 如果不需要等待 (wait_completion = 0)，CS 将在 DMA 完成回调函数 HAL_SPI_TxCpltCallback 中拉高
 	}
 	else // 如果未使用 DMA，使用阻塞式 SPI 传输
 	{
 		// 使用平台抽象的阻塞式发送函数
-        TFT_Platform_SPI_Transmit_Blocking(tft_spi_handle, data_buffer, length, HAL_MAX_DELAY); // 使用最大超时时间
-		TFT_Pin_CS_Set(1); // 阻塞传输完成后立即拉高片选
+		TFT_Platform_SPI_Transmit_Blocking(tft_spi_handle, data_buffer, length, HAL_MAX_DELAY); // 使用最大超时时间
+		TFT_Pin_CS_Set(1);																		// 阻塞传输完成后立即拉高片选
 	}
 }
 
@@ -204,7 +203,7 @@ void TFT_Buffer_Write16(uint16_t data)
 
 	// 将 16 位数据按大端序写入缓冲区
 	tft_tx_buffer[buffer_write_index++] = (data >> 8) & 0xFF; // 高字节
-	tft_tx_buffer[buffer_write_index++] = data & 0xFF;		 // 低字节
+	tft_tx_buffer[buffer_write_index++] = data & 0xFF;		  // 低字节
 }
 
 /**
@@ -257,11 +256,11 @@ void TFT_IO_Init(SPI_HandleTypeDef *hspi_ptr)
 		is_dma_enabled = 0; // SPI 未配置 DMA 发送
 	}
 #elif defined(SOME_OTHER_PLATFORM)
-    // 在此添加其他平台的 DMA 配置检查逻辑
-    // is_dma_enabled = OtherPlatform_IsDmaEnabled(tft_spi_handle);
-    is_dma_enabled = 0; // 假设默认禁用 DMA，需要具体实现
+	// 在此添加其他平台的 DMA 配置检查逻辑
+	// is_dma_enabled = OtherPlatform_IsDmaEnabled(tft_spi_handle);
+	is_dma_enabled = 0; // 假设默认禁用 DMA，需要具体实现
 #else
-	#error "No platform defined for SPI/DMA initialization in TFT_config.h"
+#error "No platform defined for SPI/DMA initialization in TFT_config.h"
 #endif
 
 	is_dma_transfer_active = 0; // 初始化 DMA 传输状态标志
@@ -298,16 +297,17 @@ static void TFT_Wait_DMA_Transfer_Complete(void)
  */
 void TFT_Write_Data8(uint8_t data)
 {
-	if (tft_spi_handle == NULL) return;
+	if (tft_spi_handle == NULL)
+		return;
 
 	TFT_Wait_DMA_Transfer_Complete(); // 确保之前的 DMA 操作完成
-	TFT_Pin_DC_Set(1);	 // 确保是数据模式
-	TFT_Pin_CS_Set(0);	 // 片选选中
+	TFT_Pin_DC_Set(1);				  // 确保是数据模式
+	TFT_Pin_CS_Set(0);				  // 片选选中
 
 	// 使用平台抽象的阻塞式发送单个字节
 	TFT_Platform_SPI_Transmit_Blocking(tft_spi_handle, &data, 1, HAL_MAX_DELAY);
 
-	TFT_Pin_CS_Set(1);	 // 传输完成后拉高 CS
+	TFT_Pin_CS_Set(1); // 传输完成后拉高 CS
 }
 
 /**
@@ -319,20 +319,21 @@ void TFT_Write_Data8(uint8_t data)
  */
 void TFT_Write_Data16(uint16_t data)
 {
-	if (tft_spi_handle == NULL) return;
+	if (tft_spi_handle == NULL)
+		return;
 
 	uint8_t spi_data[2];
 	spi_data[0] = (data >> 8) & 0xFF; // 高字节 (大端)
-	spi_data[1] = data & 0xFF;		// 低字节
+	spi_data[1] = data & 0xFF;		  // 低字节
 
 	TFT_Wait_DMA_Transfer_Complete(); // 确保之前的 DMA 操作完成
-	TFT_Pin_DC_Set(1);	 // 数据模式
-	TFT_Pin_CS_Set(0);	 // 片选选中
+	TFT_Pin_DC_Set(1);				  // 数据模式
+	TFT_Pin_CS_Set(0);				  // 片选选中
 
 	// 使用平台抽象的阻塞式发送 2 个字节
 	TFT_Platform_SPI_Transmit_Blocking(tft_spi_handle, spi_data, 2, HAL_MAX_DELAY);
 
-	TFT_Pin_CS_Set(1);	 // 传输完成后拉高 CS
+	TFT_Pin_CS_Set(1); // 传输完成后拉高 CS
 }
 
 /**
@@ -344,32 +345,31 @@ void TFT_Write_Data16(uint16_t data)
  */
 void TFT_Write_Command(uint8_t command)
 {
-	if (tft_spi_handle == NULL) return;
+	if (tft_spi_handle == NULL)
+		return;
 
 	// 发送命令前，确保缓冲区中的所有数据已发送完成
 	TFT_Flush_Buffer(1); // 等待缓冲区刷新完成
 
 	// 不需要再次调用 TFT_Wait_DMA_Transfer_Complete()，因为 Flush_Buffer(1) 已经等待了
 
-	TFT_Pin_DC_Set(0);	 // 设置为命令模式
-	TFT_Pin_CS_Set(0);	 // 片选选中
+	TFT_Pin_DC_Set(0); // 设置为命令模式
+	TFT_Pin_CS_Set(0); // 片选选中
 
 	// 使用平台抽象的阻塞式发送命令字节
 	TFT_Platform_SPI_Transmit_Blocking(tft_spi_handle, &command, 1, HAL_MAX_DELAY);
 
-	TFT_Pin_CS_Set(1);	 // 命令发送完成后立即拉高 CS
+	TFT_Pin_CS_Set(1); // 命令发送完成后立即拉高 CS
 }
 
 /**
- * @brief  设置 TFT 显示窗口区域 (GRAM 访问窗口)
- * @param  x_start 列起始坐标 (0-based)
- * @param  y_start 行起始坐标 (0-based)
- * @param  x_end   列结束坐标 (0-based, inclusive)
- * @param  y_end   行结束坐标 (0-based, inclusive)
+ * @brief  设置显示区域的地址范围
+ * @param  x_start 起始列坐标
+ * @param  y_start 起始行坐标
+ * @param  x_end   结束列坐标
+ * @param  y_end   结束行坐标
  * @retval 无
- * @note   设置地址前会先刷新缓冲区 (阻塞等待)。
- *         坐标会根据 `TFT_config.h` 中定义的 `DISPLAY_DIRECTION` 自动添加偏移量，
- *         以适应不同屏幕型号和旋转方向下的物理像素地址。
+ * @note   设置后，后续所有的数据传输都会写入此区域，窗口在不同屏幕方向下会自动适配
  */
 void TFT_Set_Address(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end)
 {
@@ -378,37 +378,47 @@ void TFT_Set_Address(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_
 
 	// --- 设置列地址 (Column Address Set, CASET, 0x2A) ---
 	TFT_Write_Command(0x2A);
-	// 根据显示方向应用 X 轴偏移量
-#if (DISPLAY_DIRECTION == 0) || (DISPLAY_DIRECTION == 2) // 0度或180度 (ST7735S 红板)
+
+	// 根据屏幕方向和型号设置列地址
+#if (DISPLAY_DIRECTION == 0) || (DISPLAY_DIRECTION == 2) // 0°或180°
 	TFT_Write_Data16(x_start + TFT_X_OFFSET);
 	TFT_Write_Data16(x_end + TFT_X_OFFSET);
-#elif (DISPLAY_DIRECTION == 1) || (DISPLAY_DIRECTION == 3) // 90度或270度 (ST7735S 红板)
-	TFT_Write_Data16(x_start + TFT_Y_OFFSET); // 注意：旋转后 X/Y 偏移可能互换或不同
+#elif (DISPLAY_DIRECTION == 1) || (DISPLAY_DIRECTION == 3) // 90°或270°
+	TFT_Write_Data16(x_start + TFT_Y_OFFSET);
 	TFT_Write_Data16(x_end + TFT_Y_OFFSET);
-#elif (DISPLAY_DIRECTION == 4) || (DISPLAY_DIRECTION == 5) // ST7735R 黑板 (假设偏移与红板不同)
-	TFT_Write_Data16(x_start + TFT_X_OFFSET); // 使用配置的偏移
-	TFT_Write_Data16(x_end + TFT_X_OFFSET);
-#else
-	#error "Invalid DISPLAY_DIRECTION defined in TFT_config.h"
 #endif
 
-	// --- 设置行地址 (Row Address Set, RASET, 0x2B) ---
+	// --- 设置行地址范围 (Set Row Address, 0x2B) ---
 	TFT_Write_Command(0x2B);
-	// 根据显示方向应用 Y 轴偏移量
-#if (DISPLAY_DIRECTION == 0) || (DISPLAY_DIRECTION == 2) // 0度或180度 (ST7735S 红板)
+
+	// 根据屏幕方向和型号设置行地址
+#if (DISPLAY_DIRECTION == 0) || (DISPLAY_DIRECTION == 2) // 0°或180°
 	TFT_Write_Data16(y_start + TFT_Y_OFFSET);
 	TFT_Write_Data16(y_end + TFT_Y_OFFSET);
-#elif (DISPLAY_DIRECTION == 1) || (DISPLAY_DIRECTION == 3) // 90度或270度 (ST7735S 红板)
-	TFT_Write_Data16(y_start + TFT_X_OFFSET); // 注意：旋转后 X/Y 偏移可能互换或不同
+#elif (DISPLAY_DIRECTION == 1) || (DISPLAY_DIRECTION == 3) // 90°或270°
+	TFT_Write_Data16(y_start + TFT_X_OFFSET);
 	TFT_Write_Data16(y_end + TFT_X_OFFSET);
-#elif (DISPLAY_DIRECTION == 4) || (DISPLAY_DIRECTION == 5) // ST7735R 黑板
-	TFT_Write_Data16(y_start + TFT_Y_OFFSET); // 使用配置的偏移
-	TFT_Write_Data16(y_end + TFT_Y_OFFSET);
 #endif
 
 	// --- 发送写 GRAM 命令 (Memory Write, 0x2C) ---
 	// 后续发送的数据将被写入由此窗口定义的 GRAM 区域
 	TFT_Write_Command(0x2C);
+}
+
+/**
+ * @brief  将RGB颜色值转换为RGB565格式
+ * @param  r  红色分量，范围0-255
+ * @param  g  绿色分量，范围0-255
+ * @param  b  蓝色分量，范围0-255
+ * @retval RGB565格式的16位颜色值
+ * @note   RGB888 (24bit) -> RGB565 (16bit)
+ *         R: 5bit (0-31), G: 6bit (0-63), B: 5bit (0-31)
+ */
+uint16_t TFT_RGB(uint8_t r, uint8_t g, uint8_t b)
+{
+    // 转换RGB888到RGB565格式
+    // R(5位) G(6位) B(5位)
+    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 }
 
 //----------------- HAL SPI DMA 回调函数 -----------------
