@@ -768,3 +768,347 @@ void TFT_Fill_Rounded_Rectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t
 	// 确保所有缓冲数据都被发送 (如果 Fill_Quarter_Circle 内部没有完全刷新)
 	// TFT_Flush_Buffer(1); // Fill_Rectangle 和 Fast_HLine/VLine 内部会刷新，可能不需要
 }
+
+/**
+ * @brief  绘制一个空心椭圆
+ * @param  centerX, centerY 椭圆中心坐标
+ * @param  radiusX 椭圆X轴半径
+ * @param  radiusY 椭圆Y轴半径
+ * @param  color   椭圆颜色 (RGB565格式)
+ * @retval 无
+ */
+void TFT_Draw_Ellipse(uint16_t centerX, uint16_t centerY, uint16_t radiusX, uint16_t radiusY, uint16_t color)
+{
+	int32_t x = 0;
+	int32_t y = radiusY;
+
+	int32_t radiusX2 = radiusX * radiusX;
+	int32_t radiusY2 = radiusY * radiusY;
+	int32_t error = radiusY2 - (radiusX2 * radiusY) + (radiusX2 / 4);
+
+	TFT_Point ellipsePoints[4]; // 用于批量绘制点的数组
+
+	// 确保缓冲区是空的
+	TFT_Reset_Buffer();
+
+	while (radiusX2 * y > radiusY2 * x)
+	{
+		// 四个对称点批量绘制
+		ellipsePoints[0] = (TFT_Point){centerX + x, centerY + y};
+		ellipsePoints[1] = (TFT_Point){centerX - x, centerY + y};
+		ellipsePoints[2] = (TFT_Point){centerX + x, centerY - y};
+		ellipsePoints[3] = (TFT_Point){centerX - x, centerY - y};
+
+		// 批量绘制多个点以提高效率
+		for (uint8_t i = 0; i < 4; i++)
+		{
+			TFT_Set_Address(ellipsePoints[i].x, ellipsePoints[i].y,
+							ellipsePoints[i].x, ellipsePoints[i].y);
+			TFT_Buffer_Write16(color);
+		}
+
+		if (error >= 0)
+		{
+			y--;
+			error -= 2 * radiusX2 * y;
+		}
+		x++;
+		error += 2 * radiusY2 * x + radiusY2;
+	}
+
+	error = radiusY2 * x * x + radiusX2 * y * y - radiusX2 * radiusY2;
+
+	while (y >= 0)
+	{
+		// 四个对称点批量绘制
+		ellipsePoints[0] = (TFT_Point){centerX + x, centerY + y};
+		ellipsePoints[1] = (TFT_Point){centerX - x, centerY + y};
+		ellipsePoints[2] = (TFT_Point){centerX + x, centerY - y};
+		ellipsePoints[3] = (TFT_Point){centerX - x, centerY - y};
+
+		// 批量绘制多个点以提高效率
+		for (uint8_t i = 0; i < 4; i++)
+		{
+			TFT_Set_Address(ellipsePoints[i].x, ellipsePoints[i].y,
+							ellipsePoints[i].x, ellipsePoints[i].y);
+			TFT_Buffer_Write16(color);
+		}
+
+		if (error <= 0)
+		{
+			x++;
+			error += 2 * radiusY2 * x;
+		}
+		y--;
+		error += -2 * radiusX2 * y + radiusX2;
+	}
+
+	TFT_Flush_Buffer(1); // 确保所有点都被发送到屏幕
+}
+
+/**
+ * @brief  填充一个实心椭圆
+ * @param  centerX, centerY 椭圆中心坐标
+ * @param  radiusX 椭圆X轴半径
+ * @param  radiusY 椭圆Y轴半径
+ * @param  color   填充颜色 (RGB565格式)
+ * @retval 无
+ */
+void TFT_Fill_Ellipse(uint16_t centerX, uint16_t centerY, uint16_t radiusX, uint16_t radiusY, uint16_t color)
+{
+	int32_t x = 0;
+	int32_t y = radiusY;
+	int32_t radiusX2 = radiusX * radiusX;
+	int32_t radiusY2 = radiusY * radiusY;
+	int32_t error = radiusY2 - (radiusX2 * radiusY) + (radiusX2 / 4);
+
+	// 第一区域
+	while (radiusX2 * y > radiusY2 * x)
+	{
+		// 绘制水平线段
+		TFT_Draw_Fast_HLine(centerX - x, centerY + y, 2 * x + 1, color);
+		TFT_Draw_Fast_HLine(centerX - x, centerY - y, 2 * x + 1, color);
+
+		if (error >= 0)
+		{
+			y--;
+			error -= 2 * radiusX2 * y;
+		}
+		x++;
+		error += 2 * radiusY2 * x + radiusY2;
+	}
+
+	// 第二区域
+	error = radiusY2 * x * x + radiusX2 * y * y - radiusX2 * radiusY2;
+
+	while (y >= 0)
+	{
+		// 绘制水平线段
+		TFT_Draw_Fast_HLine(centerX - x, centerY + y, 2 * x + 1, color);
+		TFT_Draw_Fast_HLine(centerX - x, centerY - y, 2 * x + 1, color);
+
+		if (error <= 0)
+		{
+			x++;
+			error += 2 * radiusY2 * x;
+		}
+		y--;
+		error += -2 * radiusX2 * y + radiusX2;
+	}
+}
+
+/**
+ * @brief  绘制二阶贝塞尔曲线
+ * @param  x0, y0 起始点坐标
+ * @param  x1, y1 控制点坐标
+ * @param  x2, y2 终点坐标
+ * @param  segments 曲线分段数(越大越平滑)
+ * @param  color 曲线颜色 (RGB565格式)
+ * @retval 无
+ */
+void TFT_Draw_Bezier2(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
+					  uint16_t x2, uint16_t y2, uint8_t segments, uint16_t color)
+{
+	float t, t2, t_1, t_12;
+	uint16_t x, y, lx = x0, ly = y0;
+
+	// 分段数不能为0
+	if (segments == 0)
+	{
+		segments = 1;
+	}
+
+	// 绘制第一个点 (t=0)
+	TFT_Draw_Point(x0, y0, color);
+
+	// 逐段计算贝塞尔曲线点并绘制线段
+	for (uint8_t i = 1; i <= segments; i++)
+	{
+		t = i / (float)segments; // t 从 1/segments 到 1
+		t2 = t * t;
+		t_1 = 1.0f - t;
+		t_12 = t_1 * t_1;
+
+		// 二阶贝塞尔曲线公式: B(t) = (1-t)²*P0 + 2(1-t)*t*P1 + t²*P2
+		x = t_12 * x0 + 2 * t_1 * t * x1 + t2 * x2;
+		y = t_12 * y0 + 2 * t_1 * t * y1 + t2 * y2;
+
+		// 绘制当前线段
+		TFT_Draw_Line(lx, ly, x, y, color);
+		lx = x;
+		ly = y;
+	}
+}
+
+/**
+ * @brief  绘制空心多边形
+ * @param  points 多边形顶点坐标数组
+ * @param  numPoints 顶点数量
+ * @param  color 多边形边框颜色
+ * @retval 无
+ */
+void TFT_Draw_Polygon(const TFT_Point points[], uint16_t numPoints, uint16_t color)
+{
+	if (numPoints < 3 || points == NULL)
+		return;
+
+	// 绘制多边形的所有边
+	for (uint16_t i = 0; i < numPoints - 1; i++)
+	{
+		TFT_Draw_Line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, color);
+	}
+
+	// 连接最后一个点与第一个点，形成闭合图形
+	TFT_Draw_Line(points[numPoints - 1].x, points[numPoints - 1].y, points[0].x, points[0].y, color);
+}
+
+/**
+ * @brief  填充简单多边形（不处理复杂情况如自交）
+ * @param  points 多边形顶点坐标数组
+ * @param  numPoints 顶点数量
+ * @param  color 填充颜色
+ * @retval 无
+ * @note   使用水平扫描线算法，仅适用于简单多边形
+ */
+void TFT_Fill_Polygon(const TFT_Point points[], uint16_t numPoints, uint16_t color)
+{
+	if (numPoints < 3 || points == NULL)
+		return;
+
+	// 1. 找到多边形的边界框
+	int16_t minY = points[0].y;
+	int16_t maxY = points[0].y;
+
+	for (uint16_t i = 1; i < numPoints; i++)
+	{
+		if (points[i].y < minY)
+			minY = points[i].y;
+		if (points[i].y > maxY)
+			maxY = points[i].y;
+	}
+
+	// 边界框无效
+	if (minY >= maxY)
+		return;
+
+	// 临时数组存储扫描线与多边形边的交点的X坐标
+	int16_t intersections[128]; // 根据实际需求调整大小
+
+	// 2. 对每一扫描线，找出所有交点
+	for (int16_t y = minY; y <= maxY; y++)
+	{
+		uint8_t intersectCount = 0;
+
+		// 检查每条边
+		for (uint16_t i = 0; i < numPoints; i++)
+		{
+			// 获取当前边的两个端点
+			uint16_t j = (i + 1) % numPoints;
+			int16_t y1 = points[i].y;
+			int16_t y2 = points[j].y;
+
+			// 如果扫描线与当前边相交
+			if ((y1 <= y && y2 > y) || (y2 <= y && y1 > y))
+			{
+				// 计算交点的X坐标
+				int16_t x1 = points[i].x;
+				int16_t x2 = points[j].x;
+
+				// 使用线性插值计算交点X坐标
+				int32_t x;
+				if (y1 == y2)
+				{
+					// 边是水平的，取两端点的平均X坐标
+					x = (x1 + x2) / 2;
+				}
+				else
+				{
+					// 非水平边，计算交点X坐标
+					x = x1 + (int32_t)(y - y1) * (x2 - x1) / (y2 - y1);
+				}
+
+				// 存储交点
+				if (intersectCount < 128)
+				{
+					intersections[intersectCount++] = x;
+				}
+			}
+		}
+
+		// 3. 对交点按X坐标排序
+		// 插入排序
+		for (uint8_t i = 1; i < intersectCount; i++)
+		{
+			int16_t temp = intersections[i];
+			int16_t j = i;
+			while (j > 0 && intersections[j - 1] > temp)
+			{
+				intersections[j] = intersections[j - 1];
+				j--;
+			}
+			intersections[j] = temp;
+		}
+
+		// 4. 成对连线绘制填充区域（注：跳过垂直边生成的重复交点）
+		for (uint8_t i = 0; i < intersectCount; i += 2)
+		{
+			if (i + 1 < intersectCount)
+			{
+				// 绘制水平线段
+				int16_t x1 = intersections[i];
+				int16_t x2 = intersections[i + 1];
+				TFT_Draw_Fast_HLine(x1, y, x2 - x1 + 1, color);
+			}
+		}
+	}
+}
+
+/**
+ * @brief  绘制圆弧
+ * @param  centerX, centerY 圆心坐标
+ * @param  radius 圆弧半径
+ * @param  startAngle 起始角度(0-360度)
+ * @param  endAngle 结束角度(0-360度)
+ * @param  color 圆弧颜色
+ * @retval 无
+ */
+void TFT_Draw_Arc(uint16_t centerX, uint16_t centerY, uint8_t radius,
+				  uint16_t startAngle, uint16_t endAngle, uint16_t color)
+{
+	// 将角度限制在0-360范围内
+	startAngle = startAngle % 360;
+	endAngle = endAngle % 360;
+
+	// 确保终止角度大于起始角度
+	if (endAngle < startAngle)
+	{
+		endAngle += 360;
+	}
+
+	// 计算弧长确定采样点数量，每2度一个点
+	uint16_t segments = (endAngle - startAngle) / 2;
+	if (segments < 1)
+		segments = 1; // 至少绘制一段
+
+	float angleStep = (endAngle - startAngle) * 0.0174532925f / segments; // 弧度步长
+	float currentAngle = startAngle * 0.0174532925f;					  // 转换为弧度
+
+	// 绘制弧的第一个点
+	uint16_t lastX = centerX + (uint16_t)(radius * cos(currentAngle));
+	uint16_t lastY = centerY + (uint16_t)(radius * sin(currentAngle));
+	TFT_Draw_Point(lastX, lastY, color);
+
+	// 逐段计算并绘制弧线
+	for (uint16_t i = 1; i <= segments; i++)
+	{
+		currentAngle += angleStep;
+		uint16_t x = centerX + (uint16_t)(radius * cos(currentAngle));
+		uint16_t y = centerY + (uint16_t)(radius * sin(currentAngle));
+
+		// 绘制当前线段
+		TFT_Draw_Line(lastX, lastY, x, y, color);
+
+		lastX = x;
+		lastY = y;
+	}
+}
