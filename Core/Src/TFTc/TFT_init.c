@@ -27,32 +27,31 @@ void TFT_Init_ST7735S(TFT_HandleTypeDef *htft)
 	TFT_Pin_RES_Set(htft, 1);
 	HAL_Delay(100);
 
-	// 开始发送初始化命令序列
-	TFT_Write_Command(htft, 0x11); // Sleep Exit
-	HAL_Delay(120);
+	TFT_Pin_BLK_Set(htft, 1); // 打开背光 (高)
+	HAL_Delay(100);
 
-	// Memory Data Access Control (MADCTL)
-	TFT_Write_Command(htft, 0x36);
-	TFT_Write_Data8(htft, 0xC0); // 行扫描顺序(MH,ML):从下到上,从左到右，RGB顺序
+	// 1. 软件复位 (Software Reset)
+	TFT_Write_Command(htft, 0x01);
+	HAL_Delay(150);
 
-	// Interface Pixel Format (COLMOD)
-	TFT_Write_Command(htft, 0x3A);
-	TFT_Write_Data8(htft, 0x05); // 16-bit RGB565 格式
+	// 2. 退出睡眠模式 (Sleep out)
+	TFT_Write_Command(htft, 0x11); // 退出睡眠模式
+	HAL_Delay(255);
 
-	// Frame Rate Control (In normal mode/ Full colors)
-	TFT_Write_Command(htft, 0xB1);
-	TFT_Write_Data8(htft, 0x01); // Frame rate = fosc/(1*2+40) * (LINE+2C+2D)
+	// 3. 设置帧率控制 (Frame Rate Control)
+	TFT_Write_Command(htft, 0xB1); // FRMCTR1 (In normal mode/ Full colors)
+	TFT_Write_Data8(htft, 0x01);   // Frame rate = fosc/(1*2+40) * (LINE+2C+2D)
 	TFT_Write_Data8(htft, 0x2C);
 	TFT_Write_Data8(htft, 0x2D);
 
-	// Frame Rate Control (In Idle mode/ 8-colors)
-	TFT_Write_Command(htft, 0xB2);
+	// 4. 设置帧率控制 (空闲模式) (Frame Rate Control 2)
+	TFT_Write_Command(htft, 0xB2); // FRMCTR2 (In Idle mode/ 8-colors)
 	TFT_Write_Data8(htft, 0x01);
 	TFT_Write_Data8(htft, 0x2C);
 	TFT_Write_Data8(htft, 0x2D);
 
-	// Frame Rate Control (In Partial mode/ full colors)
-	TFT_Write_Command(htft, 0xB3);
+	// 5. 设置帧率控制 (部分模式) (Frame Rate control 3)
+	TFT_Write_Command(htft, 0xB3); // FRMCTR3 (In Partial mode/ full colors)
 	TFT_Write_Data8(htft, 0x01);
 	TFT_Write_Data8(htft, 0x2C);
 	TFT_Write_Data8(htft, 0x2D);
@@ -60,44 +59,49 @@ void TFT_Init_ST7735S(TFT_HandleTypeDef *htft)
 	TFT_Write_Data8(htft, 0x2C);
 	TFT_Write_Data8(htft, 0x2D);
 
-	// Display Inversion Control (INVCTR)
-	TFT_Write_Command(htft, 0xB4);
-	TFT_Write_Data8(htft, 0x07); // 列倒装
+	// 6. 设置显示反转控制 (Display Inversion Control)
+	TFT_Write_Command(htft, 0xB4); // INVCTR
+	TFT_Write_Data8(htft, 0x07);   // 列倒装
 
-	// Power Control 1 (PWCTR1)
-	TFT_Write_Command(htft, 0xC0);
-	TFT_Write_Data8(htft, 0xA2);
-	TFT_Write_Data8(htft, 0x02);
-	TFT_Write_Data8(htft, 0x84);
+	// 7. 设置电源控制1 (Power Control 1)
+	TFT_Write_Command(htft, 0xC0); // PWCTR1
+	TFT_Write_Data8(htft, 0xA2);   // -4.6V
+	TFT_Write_Data8(htft, 0x02);   // AVCC=VCIx2, VGH=VCIx7, VGL=-VCIx4
+	TFT_Write_Data8(htft, 0x84);   // Opamp current small, Boost frequency
 
-	// Power Control 2 (PWCTR2)
-	TFT_Write_Command(htft, 0xC1);
-	TFT_Write_Data8(htft, 0xC5);
+	// 8. 设置电源控制2 (Power Control 2)
+	TFT_Write_Command(htft, 0xC1); // PWCTR2
+	TFT_Write_Data8(htft, 0xC5);   // VGH = VCI * 2.5, VGL = -VCI * 2.5
 
-	// Power Control 3 (PWCTR3) in Normal mode
-	TFT_Write_Command(htft, 0xC2);
-	TFT_Write_Data8(htft, 0x0A);
-	TFT_Write_Data8(htft, 0x00);
+	// 9. 设置电源控制3 (Power Control 3)
+	TFT_Write_Command(htft, 0xC2); // PWCTR3 (In Normal mode/ Full colors)
+	TFT_Write_Data8(htft, 0x0A);   // Opamp current small, Boost frequency
+	TFT_Write_Data8(htft, 0x00);   // Boost frequency
 
-	// Power Control 4 (PWCTR4) in Idle mode
-	TFT_Write_Command(htft, 0xC3);
-	TFT_Write_Data8(htft, 0x8A);
-	TFT_Write_Data8(htft, 0x2A);
+	// 10. 设置电源控制4 (Power Control 4)
+	TFT_Write_Command(htft, 0xC3); // PWCTR4 (In Idle mode/ 8-colors)
+	TFT_Write_Data8(htft, 0x8A);   // Opamp current small, Boost frequency
+	TFT_Write_Data8(htft, 0x2A);   // Boost frequency
 
-	// Power Control 5 (PWCTR5) in Partial mode
-	TFT_Write_Command(htft, 0xC4);
-	TFT_Write_Data8(htft, 0x8A);
-	TFT_Write_Data8(htft, 0xEE);
+	// 11. 设置电源控制5 (Power Control 5)
+	TFT_Write_Command(htft, 0xC4); // PWCTR5 (In Partial mode/ full colors)
+	TFT_Write_Data8(htft, 0x8A);   // Opamp current small, Boost frequency
+	TFT_Write_Data8(htft, 0xEE);   // Boost frequency
 
-	// VCOM Control 1 (VMCTR1)
-	TFT_Write_Command(htft, 0xC5);
-	TFT_Write_Data8(htft, 0x0E);
+	// 12. 设置VCOM控制 (VCOM Control 1)
+	TFT_Write_Command(htft, 0xC5); // VMCTR1
+	TFT_Write_Data8(htft, 0x0E);   // VCOMH = 4.025V, VCOML = -1.5V
 
-	// 显示反转关闭
-	TFT_Write_Command(htft, 0x20);
+	// 13. 设置屏幕旋转方向
+	TFT_Set_Direction(htft, htft->display_direction);
 
-	// 伽马校准
-	TFT_Write_Command(htft, 0xE0); // Gamma (positive polarity)
+	// 14. 设置像素格式 (Pixel Format Set)
+	TFT_Write_Command(htft, 0x3A); // COLMOD
+	TFT_Write_Data8(htft, 0x05);   // 16位像素格式 (RGB565)
+
+	// 15. 伽马校准
+	// Gamma (positive polarity)
+	TFT_Write_Command(htft, 0xE0); // GMCTRP1
 	TFT_Write_Data8(htft, 0x0F);
 	TFT_Write_Data8(htft, 0x1A);
 	TFT_Write_Data8(htft, 0x0F);
@@ -114,8 +118,8 @@ void TFT_Init_ST7735S(TFT_HandleTypeDef *htft)
 	TFT_Write_Data8(htft, 0x07);
 	TFT_Write_Data8(htft, 0x02);
 	TFT_Write_Data8(htft, 0x10);
-
-	TFT_Write_Command(htft, 0xE1); // Gamma (negative polarity)
+	// Negative Gamma Correction
+	TFT_Write_Command(htft, 0xE1); // GMCTRN1
 	TFT_Write_Data8(htft, 0x0F);
 	TFT_Write_Data8(htft, 0x1B);
 	TFT_Write_Data8(htft, 0x0F);
@@ -133,13 +137,13 @@ void TFT_Init_ST7735S(TFT_HandleTypeDef *htft)
 	TFT_Write_Data8(htft, 0x03);
 	TFT_Write_Data8(htft, 0x10);
 
-	// 设置屏幕旋转方向
-	TFT_Set_Direction(htft, htft->display_direction);
+	// 16. 开启正常显示模式 (Normal Display Mode ON)
+	TFT_Write_Command(htft, 0x13); // NORON
+	HAL_Delay(10);
 
-	// 打开显示
+	// 17. 打开显示
 	TFT_Write_Command(htft, 0x29); // Display ON
-	TFT_Pin_BLK_Set(htft, 1);	   // 打开背光
-	// HAL_Delay(20);
+	 HAL_Delay(20);
 }
 
 /**
@@ -159,6 +163,13 @@ static void TFT_Set_Direction(TFT_HandleTypeDef *htft, uint8_t direction)
 	TFT_Write_Command(htft, 0x36); // MADCTL - Memory Data Access Control
 
 	// 注意: 设置取决于屏幕型号，以下设置适用于普通ST7735S
+	// MADCTL 位标志: MY MX MV ML RGB MH - -
+	// MY: 行地址顺序 (0=从上到下, 1=从下到上)
+	// MX: 列地址顺序 (0=从左到右, 1=从右到左)
+	// MV: 行/列交换 (0=正常, 1=交换)
+	// ML: 垂直刷新顺序 (0=从上到下, 1=从下到上)
+	// RGB: 颜色顺序 (0=RGB, 1=BGR)
+	// MH: 水平刷新顺序 (0=从左到右, 1=从右到左)
 	switch (direction)
 	{
 	case 0:							 // 0度旋转
@@ -177,4 +188,107 @@ static void TFT_Set_Direction(TFT_HandleTypeDef *htft, uint8_t direction)
 		TFT_Write_Data8(htft, 0xC0); // MY=1, MX=1, MV=0, RGB
 		break;
 	}
+}
+
+
+void LCD_ST7789V3_Init(void)
+{
+
+	LCD_RES_Clr(); // 复位
+	HAL_Delay(100);
+	LCD_RES_Set();
+	HAL_Delay(100);
+
+	LCD_BLK_Set(); // 打开背光
+	HAL_Delay(100);
+
+	LCD_WR_REG(0x01); // Software Reset
+	HAL_Delay(120);
+
+	//************* Start Initial Sequence **********//
+	LCD_WR_REG(0x11); // Sleep out
+	HAL_Delay(120);	  // Delay 120ms
+	//************* Start Initial Sequence **********//
+	LCD_WR_REG(0x36);
+	if (USE_HORIZONTAL == 0)
+		LCD_WR_DATA8(0x00);
+	else if (USE_HORIZONTAL == 1)
+		LCD_WR_DATA8(0xC0);
+	else if (USE_HORIZONTAL == 2)
+		LCD_WR_DATA8(0x70);
+	else
+		LCD_WR_DATA8(0xA0);
+
+	LCD_WR_REG(0x3A);
+	LCD_WR_DATA8(0x05);
+
+	LCD_WR_REG(0xB2);
+	LCD_WR_DATA8(0x0c);
+	LCD_WR_DATA8(0x0c);
+	LCD_WR_DATA8(0x00);
+	LCD_WR_DATA8(0x33);
+	LCD_WR_DATA8(0x33);
+
+	LCD_WR_REG(0xB7);
+	LCD_WR_DATA8(0x72);
+
+	LCD_WR_REG(0xBB);
+	LCD_WR_DATA8(0x3d); // 2b
+
+	LCD_WR_REG(0xC0);
+	LCD_WR_DATA8(0x2C);
+
+	LCD_WR_REG(0xC2);
+	LCD_WR_DATA8(0x01);
+
+	LCD_WR_REG(0xC3);
+	LCD_WR_DATA8(0x19);
+
+	LCD_WR_REG(0xC4);
+	LCD_WR_DATA8(0x20); // VDV, 0x20:0v
+
+	LCD_WR_REG(0xC6);
+	LCD_WR_DATA8(0x0f); // 0x13:60Hz
+
+	LCD_WR_REG(0xD0);
+	LCD_WR_DATA8(0xA4);
+	LCD_WR_DATA8(0xA1);
+
+	LCD_WR_REG(0xD6);
+	LCD_WR_DATA8(0xA1); // sleep in后，gate输出为GND
+
+	LCD_WR_REG(0xE0);
+	LCD_WR_DATA8(0xD0);
+	LCD_WR_DATA8(0x04);
+	LCD_WR_DATA8(0x0D);
+	LCD_WR_DATA8(0x11);
+	LCD_WR_DATA8(0x13);
+	LCD_WR_DATA8(0x2B);
+	LCD_WR_DATA8(0x3F);
+	LCD_WR_DATA8(0x54);
+	LCD_WR_DATA8(0x4C);
+	LCD_WR_DATA8(0x18);
+	LCD_WR_DATA8(0x0D);
+	LCD_WR_DATA8(0x0B);
+	LCD_WR_DATA8(0x1F);
+	LCD_WR_DATA8(0x23);
+	/* 电压设置 */
+	LCD_WR_REG(0xE1);
+	LCD_WR_DATA8(0xD0);
+	LCD_WR_DATA8(0x04);
+	LCD_WR_DATA8(0x0C);
+	LCD_WR_DATA8(0x11);
+	LCD_WR_DATA8(0x13);
+	LCD_WR_DATA8(0x2C);
+	LCD_WR_DATA8(0x3F);
+	LCD_WR_DATA8(0x44);
+	LCD_WR_DATA8(0x51);
+	LCD_WR_DATA8(0x2F);
+	LCD_WR_DATA8(0x1F);
+	LCD_WR_DATA8(0x1F);
+	LCD_WR_DATA8(0x20);
+	LCD_WR_DATA8(0x23);
+	/* 显示开 */
+	LCD_WR_REG(0x21);
+	LCD_WR_REG(0x29);
 }

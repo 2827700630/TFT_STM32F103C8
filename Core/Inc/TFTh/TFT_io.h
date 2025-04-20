@@ -20,27 +20,28 @@ extern "C"
      * @brief  TFT屏幕句柄结构体，用于多屏同时显示
      * @note   每个TFT屏幕实例都有一个独立的句柄
      */
-    typedef struct {
-        SPI_HandleTypeDef *spi_handle;       // SPI句柄
-        GPIO_TypeDef *cs_port;               // CS引脚端口
-        uint16_t cs_pin;                     // CS引脚号
-        GPIO_TypeDef *dc_port;               // DC引脚端口
-        uint16_t dc_pin;                     // DC引脚号
-        GPIO_TypeDef *res_port;              // RES引脚端口
-        uint16_t res_pin;                    // RES引脚号
-        GPIO_TypeDef *bl_port;               // BL引脚端口
-        uint16_t bl_pin;                     // BL引脚号
-        
-        uint8_t *tx_buffer;                  // 发送缓冲区
-        uint16_t buffer_size;                // 缓冲区大小
-        uint16_t buffer_write_index;         // 当前缓冲区写入位置索引
-        
-        uint8_t is_dma_enabled;              // DMA使能标志
+    typedef struct
+    {
+        SPI_HandleTypeDef *spi_handle; // SPI句柄
+        GPIO_TypeDef *cs_port;         // CS引脚端口
+        uint16_t cs_pin;               // CS引脚号
+        GPIO_TypeDef *dc_port;         // DC引脚端口
+        uint16_t dc_pin;               // DC引脚号
+        GPIO_TypeDef *res_port;        // RES引脚端口
+        uint16_t res_pin;              // RES引脚号
+        GPIO_TypeDef *bl_port;         // BL引脚端口
+        uint16_t bl_pin;               // BL引脚号
+
+        uint8_t *tx_buffer;          // 发送缓冲区
+        uint16_t buffer_size;        // 缓冲区大小
+        uint16_t buffer_write_index; // 当前缓冲区写入位置索引
+
+        uint8_t is_dma_enabled;                  // DMA使能标志
         volatile uint8_t is_dma_transfer_active; // DMA传输忙标志
-        
-        uint8_t display_direction;           // 显示方向
-        uint8_t x_offset;                    // X偏移量
-        uint8_t y_offset;                    // Y偏移量
+
+        uint8_t display_direction; // 显示方向
+        uint8_t x_offset;          // X偏移量
+        uint8_t y_offset;          // Y偏移量
     } TFT_HandleTypeDef;
 
     //----------------- TFT 控制引脚函数声明 (硬件抽象) -----------------
@@ -88,7 +89,7 @@ extern "C"
      * @retval 无
      */
     void TFT_Init_Instance(TFT_HandleTypeDef *htft, SPI_HandleTypeDef *hspi,
-                          GPIO_TypeDef *cs_port, uint16_t cs_pin);
+                           GPIO_TypeDef *cs_port, uint16_t cs_pin);
 
     /**
      * @brief  配置TFT控制引脚
@@ -101,22 +102,22 @@ extern "C"
      * @param  bl_pin: BL引脚号
      * @retval 无
      */
-    void TFT_Config_Pins(TFT_HandleTypeDef *htft, 
-                        GPIO_TypeDef *dc_port, uint16_t dc_pin,
-                        GPIO_TypeDef *res_port, uint16_t res_pin,
-                        GPIO_TypeDef *bl_port, uint16_t bl_pin);
+    void TFT_Config_Pins(TFT_HandleTypeDef *htft,
+                         GPIO_TypeDef *dc_port, uint16_t dc_pin,
+                         GPIO_TypeDef *res_port, uint16_t res_pin,
+                         GPIO_TypeDef *bl_port, uint16_t bl_pin);
 
     /**
      * @brief  配置TFT显示参数
      * @param  htft: TFT屏幕句柄指针
-     * @param  display_direction: 显示方向 (0-3)
+     * @param  display_direction: 显示方向：0正置，1顺时针90度，2顺时针180度，3顺时针270度
      * @param  x_offset: X偏移量
      * @param  y_offset: Y偏移量
      * @retval 无
      */
-    void TFT_Config_Display(TFT_HandleTypeDef *htft, 
-                          uint8_t display_direction,
-                          uint8_t x_offset, uint8_t y_offset);
+    void TFT_Config_Display(TFT_HandleTypeDef *htft,
+                            uint8_t display_direction,
+                            uint8_t x_offset, uint8_t y_offset);
 
     /**
      * @brief  初始化 TFT IO 层

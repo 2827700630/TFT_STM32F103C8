@@ -18,12 +18,12 @@
 */
 
 // 多TFT实例设备管理
-#define MAX_TFT_DEVICES 4  // 最大支持的TFT设备数量
+#define MAX_TFT_DEVICES 4										   // 最大支持的TFT设备数量
 static TFT_HandleTypeDef *g_tft_handles[MAX_TFT_DEVICES] = {NULL}; // TFT设备句柄数组
 
 // --- 内部辅助函数声明 ---
 static void TFT_Wait_DMA_Transfer_Complete(TFT_HandleTypeDef *htft); // 等待 DMA 传输完成
-static void TFT_Register_Device(TFT_HandleTypeDef *htft); // 注册TFT设备
+static void TFT_Register_Device(TFT_HandleTypeDef *htft);			 // 注册TFT设备
 
 //----------------- TFT 初始化与配置函数实现 -----------------
 
@@ -36,22 +36,22 @@ static void TFT_Register_Device(TFT_HandleTypeDef *htft); // 注册TFT设备
  * @retval 无
  */
 void TFT_Init_Instance(TFT_HandleTypeDef *htft, SPI_HandleTypeDef *hspi,
-                      GPIO_TypeDef *cs_port, uint16_t cs_pin)
+					   GPIO_TypeDef *cs_port, uint16_t cs_pin)
 {
-    // 初始化基本参数
-    htft->spi_handle = hspi;
-    htft->cs_port = cs_port;
-    htft->cs_pin = cs_pin;
-    
-    // 设置默认缓冲区大小
-    htft->buffer_size = TFT_BUFFER_SIZE;
-    htft->buffer_write_index = 0;
-    htft->tx_buffer = NULL; // 后续会分配内存
-    
-    // 设置默认显示参数
-    htft->display_direction = DISPLAY_DIRECTION;
-    htft->x_offset = TFT_X_OFFSET;
-    htft->y_offset = TFT_Y_OFFSET;
+	// 初始化基本参数
+	htft->spi_handle = hspi;
+	htft->cs_port = cs_port;
+	htft->cs_pin = cs_pin;
+
+	// 设置默认缓冲区大小
+	htft->buffer_size = TFT_BUFFER_SIZE;
+	htft->buffer_write_index = 0;
+	htft->tx_buffer = NULL; // 后续会分配内存
+
+	// 设置默认显示参数
+	htft->display_direction = DISPLAY_DIRECTION;
+	htft->x_offset = TFT_X_OFFSET;
+	htft->y_offset = TFT_Y_OFFSET;
 }
 
 /**
@@ -65,34 +65,34 @@ void TFT_Init_Instance(TFT_HandleTypeDef *htft, SPI_HandleTypeDef *hspi,
  * @param  bl_pin: BL引脚号
  * @retval 无
  */
-void TFT_Config_Pins(TFT_HandleTypeDef *htft, 
-                    GPIO_TypeDef *dc_port, uint16_t dc_pin,
-                    GPIO_TypeDef *res_port, uint16_t res_pin,
-                    GPIO_TypeDef *bl_port, uint16_t bl_pin)
+void TFT_Config_Pins(TFT_HandleTypeDef *htft,
+					 GPIO_TypeDef *dc_port, uint16_t dc_pin,
+					 GPIO_TypeDef *res_port, uint16_t res_pin,
+					 GPIO_TypeDef *bl_port, uint16_t bl_pin)
 {
-    htft->dc_port = dc_port;
-    htft->dc_pin = dc_pin;
-    htft->res_port = res_port;
-    htft->res_pin = res_pin;
-    htft->bl_port = bl_port;
-    htft->bl_pin = bl_pin;
+	htft->dc_port = dc_port;
+	htft->dc_pin = dc_pin;
+	htft->res_port = res_port;
+	htft->res_pin = res_pin;
+	htft->bl_port = bl_port;
+	htft->bl_pin = bl_pin;
 }
 
 /**
  * @brief  配置TFT显示参数
  * @param  htft: TFT屏幕句柄指针
- * @param  display_direction: 显示方向 (0-3)
+ * @param  display_direction: 显示方向：0正置，1顺时针90度，2顺时针180度，3顺时针270度
  * @param  x_offset: X偏移量
  * @param  y_offset: Y偏移量
  * @retval 无
  */
-void TFT_Config_Display(TFT_HandleTypeDef *htft, 
-                      uint8_t display_direction,
-                      uint8_t x_offset, uint8_t y_offset)
+void TFT_Config_Display(TFT_HandleTypeDef *htft,
+						uint8_t display_direction,
+						uint8_t x_offset, uint8_t y_offset)
 {
-    htft->display_direction = display_direction;
-    htft->x_offset = x_offset;
-    htft->y_offset = y_offset;
+	htft->display_direction = display_direction;
+	htft->x_offset = x_offset;
+	htft->y_offset = y_offset;
 }
 
 /**
@@ -103,12 +103,14 @@ void TFT_Config_Display(TFT_HandleTypeDef *htft,
  */
 static void TFT_Register_Device(TFT_HandleTypeDef *htft)
 {
-    for (int i = 0; i < MAX_TFT_DEVICES; i++) {
-        if (g_tft_handles[i] == NULL || g_tft_handles[i]->spi_handle == htft->spi_handle) {
-            g_tft_handles[i] = htft;
-            break;
-        }
-    }
+	for (int i = 0; i < MAX_TFT_DEVICES; i++)
+	{
+		if (g_tft_handles[i] == NULL || g_tft_handles[i]->spi_handle == htft->spi_handle)
+		{
+			g_tft_handles[i] = htft;
+			break;
+		}
+	}
 }
 
 //----------------- TFT 控制引脚函数实现 (依赖于具体硬件平台 HAL) -----------------
@@ -235,7 +237,7 @@ int TFT_Platform_SPI_Transmit_DMA_Start(SPI_HandleTypeDef *spi_handle, uint8_t *
 
 /**
  * @brief  通过 SPI 发送指定缓冲区的数据到 TFT
- * @param  htft TFT句柄指针 
+ * @param  htft TFT句柄指针
  * @param  data_buffer 要发送的数据缓冲区指针
  * @param  length      要发送的数据长度（字节数）
  * @param  wait_completion 是否等待传输完成 (1=等待, 0=不等待，仅 DMA 模式有效)
@@ -260,7 +262,7 @@ void TFT_SPI_Send(TFT_HandleTypeDef *htft, uint8_t *data_buffer, uint16_t length
 		if (wait_completion)
 		{
 			TFT_Wait_DMA_Transfer_Complete(htft); // 等待 DMA 完成
-			TFT_Pin_CS_Set(htft, 1);              // DMA 完成后手动拉高片选
+			TFT_Pin_CS_Set(htft, 1);			  // DMA 完成后手动拉高片选
 		}
 		// 如果不需要等待 (wait_completion = 0)，CS 将在 DMA 完成回调函数 HAL_SPI_TxCpltCallback 中拉高
 	}
@@ -268,7 +270,7 @@ void TFT_SPI_Send(TFT_HandleTypeDef *htft, uint8_t *data_buffer, uint16_t length
 	{
 		// 使用平台抽象的阻塞式发送函数
 		TFT_Platform_SPI_Transmit_Blocking(htft->spi_handle, data_buffer, length, HAL_MAX_DELAY); // 使用最大超时时间
-		TFT_Pin_CS_Set(htft, 1);                                                                // 阻塞传输完成后立即拉高片选
+		TFT_Pin_CS_Set(htft, 1);																  // 阻塞传输完成后立即拉高片选
 	}
 }
 
@@ -283,9 +285,9 @@ void TFT_SPI_Send(TFT_HandleTypeDef *htft, uint8_t *data_buffer, uint16_t length
 void TFT_Buffer_Write16(TFT_HandleTypeDef *htft, uint16_t data)
 {
 	// 检查参数
-    if (htft == NULL || htft->tx_buffer == NULL)
-        return;
-        
+	if (htft == NULL || htft->tx_buffer == NULL)
+		return;
+
 	// 检查缓冲区剩余空间是否足够存放 16 位数据 (2字节)
 	if (htft->buffer_write_index >= htft->buffer_size - 1)
 	{
@@ -294,7 +296,7 @@ void TFT_Buffer_Write16(TFT_HandleTypeDef *htft, uint16_t data)
 
 	// 将 16 位数据按大端序写入缓冲区
 	htft->tx_buffer[htft->buffer_write_index++] = (data >> 8) & 0xFF; // 高字节
-	htft->tx_buffer[htft->buffer_write_index++] = data & 0xFF;         // 低字节
+	htft->tx_buffer[htft->buffer_write_index++] = data & 0xFF;		  // 低字节
 }
 
 /**
@@ -305,8 +307,8 @@ void TFT_Buffer_Write16(TFT_HandleTypeDef *htft, uint16_t data)
  */
 void TFT_Flush_Buffer(TFT_HandleTypeDef *htft, uint8_t wait_completion)
 {
-    if (htft == NULL || htft->tx_buffer == NULL || htft->buffer_write_index == 0)
-        return; // 缓冲区为空，无需刷新
+	if (htft == NULL || htft->tx_buffer == NULL || htft->buffer_write_index == 0)
+		return; // 缓冲区为空，无需刷新
 
 	// 调用 TFT_SPI_Send 发送缓冲区中的数据
 	TFT_SPI_Send(htft, htft->tx_buffer, htft->buffer_write_index, wait_completion);
@@ -321,9 +323,9 @@ void TFT_Flush_Buffer(TFT_HandleTypeDef *htft, uint8_t wait_completion)
  */
 void TFT_Reset_Buffer(TFT_HandleTypeDef *htft)
 {
-    if (htft == NULL)
-        return;
-        
+	if (htft == NULL)
+		return;
+
 	htft->buffer_write_index = 0;
 }
 
@@ -334,22 +336,24 @@ void TFT_Reset_Buffer(TFT_HandleTypeDef *htft)
  */
 void TFT_IO_Init(TFT_HandleTypeDef *htft)
 {
-    if (htft == NULL || htft->spi_handle == NULL)
-    {
-        // 可以在这里添加错误处理，例如断言或日志记录
-        return;
-    }
+	if (htft == NULL || htft->spi_handle == NULL)
+	{
+		// 可以在这里添加错误处理，例如断言或日志记录
+		return;
+	}
 
-    // 分配发送缓冲区内存
-    if (htft->tx_buffer == NULL) {
-        htft->tx_buffer = (uint8_t*)malloc(htft->buffer_size);
-        if (htft->tx_buffer == NULL) {
-            // 内存分配失败处理
-            return;
-        }
-    }
-    
-    htft->buffer_write_index = 0; // 初始化缓冲区索引
+	// 分配发送缓冲区内存
+	if (htft->tx_buffer == NULL)
+	{
+		htft->tx_buffer = (uint8_t *)malloc(htft->buffer_size);
+		if (htft->tx_buffer == NULL)
+		{
+			// 内存分配失败处理
+			return;
+		}
+	}
+
+	htft->buffer_write_index = 0; // 初始化缓冲区索引
 
 #ifdef STM32HAL
 	// 检查关联的 SPI 句柄是否配置了 DMA 发送通道
@@ -370,7 +374,7 @@ void TFT_IO_Init(TFT_HandleTypeDef *htft)
 #endif
 
 	htft->is_dma_transfer_active = 0; // 初始化 DMA 传输状态标志
-	
+
 	// 注册设备到全局设备列表，用于DMA回调
 	TFT_Register_Device(htft);
 }
@@ -383,9 +387,9 @@ void TFT_IO_Init(TFT_HandleTypeDef *htft)
  */
 static void TFT_Wait_DMA_Transfer_Complete(TFT_HandleTypeDef *htft)
 {
-    if (htft == NULL)
-        return;
-        
+	if (htft == NULL)
+		return;
+
 	// 仅当 DMA 被启用且当前有活动的 DMA 传输时才需要等待
 	if (htft->is_dma_enabled)
 	{
@@ -413,8 +417,8 @@ void TFT_Write_Data8(TFT_HandleTypeDef *htft, uint8_t data)
 		return;
 
 	TFT_Wait_DMA_Transfer_Complete(htft); // 确保之前的 DMA 操作完成
-	TFT_Pin_DC_Set(htft, 1);              // 确保是数据模式
-	TFT_Pin_CS_Set(htft, 0);              // 片选选中
+	TFT_Pin_DC_Set(htft, 1);			  // 确保是数据模式
+	TFT_Pin_CS_Set(htft, 0);			  // 片选选中
 
 	// 使用平台抽象的阻塞式发送单个字节
 	TFT_Platform_SPI_Transmit_Blocking(htft->spi_handle, &data, 1, HAL_MAX_DELAY);
@@ -440,8 +444,8 @@ void TFT_Write_Data16(TFT_HandleTypeDef *htft, uint16_t data)
 	spi_data[1] = data & 0xFF;		  // 低字节
 
 	TFT_Wait_DMA_Transfer_Complete(htft); // 确保之前的 DMA 操作完成
-	TFT_Pin_DC_Set(htft, 1);             // 数据模式
-	TFT_Pin_CS_Set(htft, 0);             // 片选选中
+	TFT_Pin_DC_Set(htft, 1);			  // 数据模式
+	TFT_Pin_CS_Set(htft, 0);			  // 片选选中
 
 	// 使用平台抽象的阻塞式发送 2 个字节
 	TFT_Platform_SPI_Transmit_Blocking(htft->spi_handle, spi_data, 2, HAL_MAX_DELAY);
@@ -488,9 +492,9 @@ void TFT_Write_Command(TFT_HandleTypeDef *htft, uint8_t command)
  */
 void TFT_Set_Address(TFT_HandleTypeDef *htft, uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end)
 {
-    if (htft == NULL)
-        return;
-        
+	if (htft == NULL)
+		return;
+
 	// 设置地址前，确保缓冲区中的所有数据已发送完成
 	TFT_Flush_Buffer(htft, 1); // 等待缓冲区刷新完成
 
@@ -499,30 +503,30 @@ void TFT_Set_Address(TFT_HandleTypeDef *htft, uint16_t x_start, uint16_t y_start
 
 	// 根据屏幕方向和型号设置列地址
 	if (htft->display_direction == 0 || htft->display_direction == 2) // 0°或180°
-    {
-	    TFT_Write_Data16(htft, x_start + htft->x_offset);
-	    TFT_Write_Data16(htft, x_end + htft->x_offset);
-    }
-    else // 90°或270°
-    {
-	    TFT_Write_Data16(htft, x_start + htft->y_offset);
-	    TFT_Write_Data16(htft, x_end + htft->y_offset);
-    }
+	{
+		TFT_Write_Data16(htft, x_start + htft->x_offset);
+		TFT_Write_Data16(htft, x_end + htft->x_offset);
+	}
+	else // 90°或270°
+	{
+		TFT_Write_Data16(htft, x_start + htft->y_offset);
+		TFT_Write_Data16(htft, x_end + htft->y_offset);
+	}
 
 	// --- 设置行地址范围 (Set Row Address, 0x2B) ---
 	TFT_Write_Command(htft, 0x2B);
 
 	// 根据屏幕方向和型号设置行地址
 	if (htft->display_direction == 0 || htft->display_direction == 2) // 0°或180°
-    {
-	    TFT_Write_Data16(htft, y_start + htft->y_offset);
-	    TFT_Write_Data16(htft, y_end + htft->y_offset);
-    }
-    else // 90°或270°
-    {
-	    TFT_Write_Data16(htft, y_start + htft->x_offset);
-	    TFT_Write_Data16(htft, y_end + htft->x_offset);
-    }
+	{
+		TFT_Write_Data16(htft, y_start + htft->y_offset);
+		TFT_Write_Data16(htft, y_end + htft->y_offset);
+	}
+	else // 90°或270°
+	{
+		TFT_Write_Data16(htft, y_start + htft->x_offset);
+		TFT_Write_Data16(htft, y_end + htft->x_offset);
+	}
 
 	// --- 发送写 GRAM 命令 (Memory Write, 0x2C) ---
 	// 后续发送的数据将被写入由此窗口定义的 GRAM 区域
@@ -540,9 +544,9 @@ void TFT_Set_Address(TFT_HandleTypeDef *htft, uint16_t x_start, uint16_t y_start
  */
 uint16_t TFT_RGB(uint8_t r, uint8_t g, uint8_t b)
 {
-    // 转换RGB888到RGB565格式
-    // R(5位) G(6位) B(5位)
-    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+	// 转换RGB888到RGB565格式
+	// R(5位) G(6位) B(5位)
+	return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 }
 
 //----------------- HAL SPI DMA 回调函数 -----------------
@@ -558,24 +562,27 @@ uint16_t TFT_RGB(uint8_t r, uint8_t g, uint8_t b)
  */
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-    // 检查是哪个TFT设备触发了回调
-    for (int i = 0; i < MAX_TFT_DEVICES; i++) {
-        if (g_tft_handles[i] != NULL && g_tft_handles[i]->spi_handle == hspi) {
-            // 找到对应设备
-            TFT_HandleTypeDef *htft = g_tft_handles[i];
-            
-            // 仅在 DMA 模式下，传输完成后需要处理
-            if (htft->is_dma_enabled) {
-                // 1. 拉高片选引脚 (CS)，结束本次 SPI 通信
-                TFT_Pin_CS_Set(htft, 1);
-                // 2. 清除 DMA 传输忙标志
-                htft->is_dma_transfer_active = 0;
-                // 3. (可选) 在 RTOS 环境下，可以在这里释放信号量或设置事件标志，
-                //    以唤醒等待 DMA 完成的任务。
-                //    例如: osSemaphoreRelease(htft->spiDmaSemaphore);
-            }
-            break;
-        }
-    }
+	// 检查是哪个TFT设备触发了回调
+	for (int i = 0; i < MAX_TFT_DEVICES; i++)
+	{
+		if (g_tft_handles[i] != NULL && g_tft_handles[i]->spi_handle == hspi)
+		{
+			// 找到对应设备
+			TFT_HandleTypeDef *htft = g_tft_handles[i];
+
+			// 仅在 DMA 模式下，传输完成后需要处理
+			if (htft->is_dma_enabled)
+			{
+				// 1. 拉高片选引脚 (CS)，结束本次 SPI 通信
+				TFT_Pin_CS_Set(htft, 1);
+				// 2. 清除 DMA 传输忙标志
+				htft->is_dma_transfer_active = 0;
+				// 3. (可选) 在 RTOS 环境下，可以在这里释放信号量或设置事件标志，
+				//    以唤醒等待 DMA 完成的任务。
+				//    例如: osSemaphoreRelease(htft->spiDmaSemaphore);
+			}
+			break;
+		}
+	}
 }
 #endif // STM32HAL
