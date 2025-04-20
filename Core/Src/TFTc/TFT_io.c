@@ -1,4 +1,4 @@
-/*
+/**
  * @file    tft_io.c
  * @brief   TFT底层IO驱动实现，硬件抽象层 (HAL)
  * @details 封装了与硬件相关的操作，如 GPIO 控制和 SPI 通信 (阻塞/DMA)。
@@ -7,7 +7,7 @@
 #include "TFTh/TFT_io.h"
 #include <stdint.h>
 
-/*
+/**
 内存限制说明：
 全屏帧缓冲对于资源有限的 MCU (如 STM32F103C8T6 只有 20KB SRAM) 通常是不可行的。
 例如：
@@ -15,6 +15,7 @@
 - 128x160 屏幕 @ 16位色 (RGB565) 需要 128 * 160 * 2 = 40,960 字节 (40 KB)
 因此，本驱动采用较小的发送缓冲区结合 DMA (如果可用) 来优化性能。
 */
+
 
 // --- 内部变量 ---
 static uint8_t tft_tx_buffer[TFT_BUFFER_SIZE]; // SPI 发送缓冲区 (Transmit Buffer)

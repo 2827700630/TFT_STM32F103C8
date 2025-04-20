@@ -14,7 +14,7 @@
 		b = t;           \
 	}
 
-/*
+/**
  * @brief  在指定坐标绘制一个点
  * @param  x     点的列坐标
  * @param  y     点的行坐标
@@ -29,7 +29,7 @@ void TFT_Draw_Point(uint16_t x, uint16_t y, uint16_t color)
 	TFT_Write_Data16(color);	 // 对于单点，直接写入即可 (阻塞)
 }
 
-/*
+/**
  * @brief  绘制多个点 (利用缓冲区加速)
  * @param  points 点坐标数组
  * @param  count  点的数量
@@ -56,7 +56,7 @@ void TFT_Draw_MultiPoint(const TFT_Point points[], uint16_t count, uint16_t colo
 	TFT_Flush_Buffer(1);
 }
 
-/*
+/**
  * @brief  在指定区域填充单色
  * @param  x_start 起始列坐标
  * @param  y_start 起始行坐标
@@ -90,7 +90,7 @@ void TFT_Fill_Area(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t 
 	TFT_Flush_Buffer(1);
 }
 
-/*
+/**
  * @brief  快速绘制水平线
  * @param  x     起始列坐标
  * @param  y     行坐标
@@ -115,7 +115,7 @@ void TFT_Draw_Fast_HLine(uint16_t x, uint16_t y, uint16_t width, uint16_t color)
 	TFT_Flush_Buffer(1); // 发送并等待完成
 }
 
-/*
+/**
  * @brief  快速绘制垂直线
  * @param  x     列坐标
  * @param  y     起始行坐标
@@ -140,7 +140,7 @@ void TFT_Draw_Fast_VLine(uint16_t x, uint16_t y, uint16_t height, uint16_t color
 	TFT_Flush_Buffer(1); // 发送并等待完成
 }
 
-/*
+/**
  * @brief  绘制一条直线 (Bresenham算法, 优化水平/垂直线)
  * @param  x1    起点列坐标
  * @param  y1    起点行坐标
@@ -219,7 +219,7 @@ void TFT_Draw_Line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t 
 	TFT_Flush_Buffer(1); // 绘制斜线后刷新缓冲区，因为 Draw_Point 不刷新
 }
 
-/*
+/**
  * @brief  绘制一个空心矩形
  * @param  x1    左上角列坐标
  * @param  y1    左上角行坐标
@@ -236,7 +236,7 @@ void TFT_Draw_Rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint
 	TFT_Draw_Fast_VLine(x2, y1, y2 - y1 + 1, color); // 右边
 }
 
-/*
+/**
  * @brief  填充一个实心矩形
  * @param  x1    左上角列坐标
  * @param  y1    左上角行坐标
@@ -265,7 +265,7 @@ void TFT_Fill_Rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint
 	TFT_Fill_Area(x1, y1, x2 + 1, y2 + 1, color);
 }
 
-/*
+/**
  * @brief  绘制一个空心圆 (中点画圆法)
  * @param  x0    圆心列坐标
  * @param  y0    圆心行坐标
@@ -341,7 +341,7 @@ void TFT_Draw_Circle(uint16_t x0, uint16_t y0, uint8_t r, uint16_t color)
 	}
 }
 
-/*
+/**
  * @brief  绘制一个实心圆 (水平线扫描法)
  * @param  x0    圆心列坐标
  * @param  y0    圆心行坐标
@@ -400,7 +400,7 @@ void TFT_Fill_Circle(uint16_t x0, uint16_t y0, uint8_t r, uint16_t color)
 	// 注意: Fast_HLine 内部会 Flush，这里不需要额外 Flush
 }
 
-/*
+/**
  * @brief  绘制一个空心三角形
  * @param  x1, y1 第一个顶点坐标
  * @param  x2, y2 第二个顶点坐标
@@ -415,7 +415,7 @@ void TFT_Draw_Triangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint1
 	TFT_Draw_Line(x3, y3, x1, y1, color); // 绘制第三条边
 }
 
-/*
+/**
  * @brief  填充一个实心三角形 (水平扫描线算法)
  * @param  x1, y1 第一个顶点坐标
  * @param  x2, y2 第二个顶点坐标
@@ -524,7 +524,7 @@ void TFT_Fill_Triangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint1
 	// 注意: Fast_HLine 内部会 Flush，这里不需要额外 Flush
 }
 
-/*
+/**
  * @brief  绘制四分之一圆弧 (使用 Bresenham 算法)
  * @param  centerX, centerY 圆弧所在圆的圆心坐标
  * @param  radius   圆弧半径
@@ -615,7 +615,7 @@ void TFT_Draw_Quarter_Circle(uint16_t centerX, uint16_t centerY, uint8_t radius,
 	TFT_Flush_Buffer(1);
 }
 
-/*
+/**
  * @brief  填充实心四分之一圆弧区域 (使用水平线)
  * @param  centerX, centerY 圆弧所在圆的圆心坐标
  * @param  radius   圆弧半径
@@ -639,8 +639,8 @@ void TFT_Fill_Quarter_Circle(uint16_t centerX, uint16_t centerY, uint8_t radius,
 	}
 	if (cornerMask & 0x2) // 右下角
 	{
-		TFT_Draw_Fast_VLine(centerX, centerY, radius + 1, color);		   // 垂直线 (x, y) to (x, y+r)
-		TFT_Draw_Fast_HLine(centerX, centerY, radius + 1, color);		   // 水平线 (x, y) to (x+r, y)
+		TFT_Draw_Fast_VLine(centerX, centerY, radius + 1, color); // 垂直线 (x, y) to (x, y+r)
+		TFT_Draw_Fast_HLine(centerX, centerY, radius + 1, color); // 水平线 (x, y) to (x+r, y)
 	}
 	if (cornerMask & 0x4) // 左下角
 	{
@@ -653,7 +653,6 @@ void TFT_Fill_Quarter_Circle(uint16_t centerX, uint16_t centerY, uint8_t radius,
 		TFT_Draw_Fast_HLine(centerX - radius, centerY, radius + 1, color); // 水平线 (x-r, y) to (x, y)
 	}
 
-
 	while (plotX < plotY)
 	{
 		plotX++; // x 增加 1
@@ -665,10 +664,14 @@ void TFT_Fill_Quarter_Circle(uint16_t centerX, uint16_t centerY, uint8_t radius,
 		{
 			// 在 y 变化前绘制水平线段 (较窄的部分)
 			hlineWidth = plotX + 1;
-			if (cornerMask & 0x1) TFT_Draw_Fast_HLine(centerX, centerY - plotY, hlineWidth, color); // 右上
-			if (cornerMask & 0x2) TFT_Draw_Fast_HLine(centerX, centerY + plotY, hlineWidth, color); // 右下
-			if (cornerMask & 0x4) TFT_Draw_Fast_HLine(centerX - plotX, centerY + plotY, hlineWidth, color); // 左下
-			if (cornerMask & 0x8) TFT_Draw_Fast_HLine(centerX - plotX, centerY - plotY, hlineWidth, color); // 左上
+			if (cornerMask & 0x1)
+				TFT_Draw_Fast_HLine(centerX, centerY - plotY, hlineWidth, color); // 右上
+			if (cornerMask & 0x2)
+				TFT_Draw_Fast_HLine(centerX, centerY + plotY, hlineWidth, color); // 右下
+			if (cornerMask & 0x4)
+				TFT_Draw_Fast_HLine(centerX - plotX, centerY + plotY, hlineWidth, color); // 左下
+			if (cornerMask & 0x8)
+				TFT_Draw_Fast_HLine(centerX - plotX, centerY - plotY, hlineWidth, color); // 左上
 
 			plotY--; // y 减小 1
 			decisionParam += ((plotX - plotY) << 2) + 10;
@@ -676,16 +679,19 @@ void TFT_Fill_Quarter_Circle(uint16_t centerX, uint16_t centerY, uint8_t radius,
 
 		// 绘制水平线段 (较宽的部分)
 		hlineWidth = plotY + 1;
-		if (cornerMask & 0x1) TFT_Draw_Fast_HLine(centerX, centerY - plotX, hlineWidth, color); // 右上
-		if (cornerMask & 0x2) TFT_Draw_Fast_HLine(centerX, centerY + plotX, hlineWidth, color); // 右下
-		if (cornerMask & 0x4) TFT_Draw_Fast_HLine(centerX - plotY, centerY + plotX, hlineWidth, color); // 左下
-		if (cornerMask & 0x8) TFT_Draw_Fast_HLine(centerX - plotY, centerY - plotX, hlineWidth, color); // 左上
-
+		if (cornerMask & 0x1)
+			TFT_Draw_Fast_HLine(centerX, centerY - plotX, hlineWidth, color); // 右上
+		if (cornerMask & 0x2)
+			TFT_Draw_Fast_HLine(centerX, centerY + plotX, hlineWidth, color); // 右下
+		if (cornerMask & 0x4)
+			TFT_Draw_Fast_HLine(centerX - plotY, centerY + plotX, hlineWidth, color); // 左下
+		if (cornerMask & 0x8)
+			TFT_Draw_Fast_HLine(centerX - plotY, centerY - plotX, hlineWidth, color); // 左上
 	}
 	// 注意: Fast_HLine/VLine 内部会 Flush，这里不需要额外 Flush
 }
 
-/*
+/**
  * @brief  绘制一个空心圆角矩形
  * @param  x     左上角列坐标
  * @param  y     左上角行坐标
@@ -723,7 +729,7 @@ void TFT_Draw_Rounded_Rectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t
 	TFT_Draw_Quarter_Circle(x + radius, y + height - radius - 1, radius, 4, color);				// 左下角 (cornerMask=4)
 }
 
-/*
+/**
  * @brief  填充一个实心圆角矩形
  * @param  x     左上角列坐标
  * @param  y     左上角行坐标
@@ -754,10 +760,10 @@ void TFT_Fill_Rounded_Rectangle(uint16_t x, uint16_t y, uint16_t width, uint16_t
 
 	// 3. 填充四个圆角区域 (调用辅助函数)
 	// 注意圆心坐标和 cornerMask
-	TFT_Fill_Quarter_Circle(x + radius, y + radius, radius, 8, color);						   // 左上角
-	TFT_Fill_Quarter_Circle(x + width - radius - 1, y + radius, radius, 1, color);			   // 右上角
+	TFT_Fill_Quarter_Circle(x + radius, y + radius, radius, 8, color);							// 左上角
+	TFT_Fill_Quarter_Circle(x + width - radius - 1, y + radius, radius, 1, color);				// 右上角
 	TFT_Fill_Quarter_Circle(x + width - radius - 1, y + height - radius - 1, radius, 2, color); // 右下角
-	TFT_Fill_Quarter_Circle(x + radius, y + height - radius - 1, radius, 4, color);			   // 左下角
+	TFT_Fill_Quarter_Circle(x + radius, y + height - radius - 1, radius, 4, color);				// 左下角
 
 	// 确保所有缓冲数据都被发送 (如果 Fill_Quarter_Circle 内部没有完全刷新)
 	// TFT_Flush_Buffer(1); // Fill_Rectangle 和 Fast_HLine/VLine 内部会刷新，可能不需要
