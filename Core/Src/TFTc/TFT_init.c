@@ -87,13 +87,13 @@ void TFT_Init_ST7735(SPI_HandleTypeDef *hspi)
 
 	// 13. 设置内存访问控制 (Memory Access Control - MADCTL)
 	TFT_Write_Command(0x36);
-	// MADCTL Bits: MY MX MV ML RGB MH - -
-	// MY: Row Address Order (0=T->B, 1=B->T)
-	// MX: Col Address Order (0=L->R, 1=R->L)
-	// MV: Row/Col Exchange (0=Normal, 1=Exchange)
-	// ML: Vertical Refresh Order (0=T->B, 1=B->T)
-	// RGB: Color Order (0=RGB, 1=BGR)
-	// MH: Horizontal Refresh Order (0=L->R, 1=R->L)
+    // MADCTL 位标志: MY MX MV ML RGB MH - -
+    // MY: 行地址顺序 (0=从上到下, 1=从下到上)
+    // MX: 列地址顺序 (0=从左到右, 1=从右到左)
+    // MV: 行/列交换 (0=正常, 1=交换)
+    // ML: 垂直刷新顺序 (0=从上到下, 1=从下到上)
+    // RGB: 颜色顺序 (0=RGB, 1=BGR)
+    // MH: 水平刷新顺序 (0=从左到右, 1=从右到左)
 #if DISPLAY_DIRECTION == 0	 // ST7735S 正常 (0度, 红板, BGR)
 	TFT_Write_Data8(0x08);	 // MY=0, MX=0, MV=0, ML=0, RGB=1, MH=0
 #elif DISPLAY_DIRECTION == 1 // ST7735S 旋转90度 (红板, BGR)

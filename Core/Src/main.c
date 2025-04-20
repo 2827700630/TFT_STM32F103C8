@@ -24,8 +24,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "TFTh/TFT.h"
+#include "TFTh/TFT_CAD.h" // 包含绘图函数和 IO 函数
 #include "TFTh/TFT_init.h"
+#include "TFTh/TFT_text.h"
 #include <stdio.h>  // 添加 stdio.h 用于 sprintf
 #include <stdlib.h> // 添加 stdlib.h 用于 rand()
 /* USER CODE END Includes */
@@ -103,83 +104,60 @@ int main(void)
   start_tick = HAL_GetTick(); // 获取开始时间
   frame_count = 0;
 
-  // 动画变量初始化
-  int16_t rect_x = 10;
-  int16_t rect_y = 10;
-  int16_t rect_w = 30;
-  int16_t rect_h = 20;
-  int16_t rect_dx = 2; // X方向速度
-  int16_t rect_dy = 1; // Y方向速度
-
-  uint8_t circle_r = 10;
-  uint8_t circle_r_dir = 1; // 半径变化方向
-
-  uint16_t current_color = RED;
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  start_tick = HAL_GetTick(); // 获取开始时间
+  frame_count = 0;
+  sprintf(fps_str, "FPS: 0.0");
+  
   while (1)
   {
-    // 1. 清屏 (或只清除需要更新的区域以提高效率)
+    // 清除上一次显示的内容
     TFT_Fill_Area(0, 0, 128, 160, BLACK);
-
-    // 2. 更新动画状态
-    // 移动矩形
-    rect_x += rect_dx;
-    rect_y += rect_dy;
-
-    // 边界碰撞检测
-    if (rect_x <= 0 || rect_x + rect_w >= 128)
-    {
-      rect_dx = -rect_dx; // X方向反向
-      rect_x += rect_dx;  // 调整位置防止卡住
-    }
-    if (rect_y <= 0 || rect_y + rect_h >= 160)
-    {
-      rect_dy = -rect_dy; // Y方向反向
-      rect_y += rect_dy;  // 调整位置防止卡住
-    }
-
-    // 变化圆半径
-    if (circle_r_dir)
-    {
-      circle_r++;
-      if (circle_r >= 30)
-        circle_r_dir = 0;
-    }
-    else
-    {
-      circle_r--;
-      if (circle_r <= 5)
-        circle_r_dir = 1;
-    }
-
-    // 变化颜色 (简单示例：在几种颜色间切换)
-    current_color = (uint16_t)rand(); // 随机颜色，或者使用更平滑的过渡
-
-    // 3. 绘制图形
-    TFT_Fill_Rectangle(rect_x, rect_y, rect_x + rect_w - 1, rect_y + rect_h - 1, BLUE);
-    TFT_Fill_Circle(64, 80, circle_r, current_color);
-
-    // 4. 帧率计算与显示 (可选，需要显示函数支持)
+    
+    // 显示一些文本内容用于测试
+    TFT_Show_String(5, 25, (uint8_t*)"Test FPS", GREEN, BLACK, 12, 0);
+    
+    // 每秒计算一次帧率
     frame_count++;
     uint32_t current_tick = HAL_GetTick();
-    uint32_t elapsed_time = current_tick - start_tick;
-    if (elapsed_time >= 1000) // 每秒更新一次 FPS
-    {
-      fps = (float)frame_count * 1000.0f / (float)elapsed_time;
-      sprintf(fps_str, "FPS:%.1f", fps);
-      // TFT_Show_String(5, 5, (uint8_t*)fps_str, WHITE, BLACK, 16, 0); // 需要 TFT_Show_String 函数
+    uint32_t elapsed_ms = current_tick - start_tick;
+    
+    if (elapsed_ms >= 1000) {
+      // 计算帧率
+      fps = (float)frame_count * 1000.0f / elapsed_ms;
+      
+      // 重置计数器
       start_tick = current_tick;
       frame_count = 0;
+      
+      // 格式化帧率字符串
+      sprintf(fps_str, "FPS: %.1f", fps);
     }
-
-    // 5. LED 闪烁与延时
+    
+    // 显示帧率
+    TFT_Show_String(5, 45, (uint8_t*)fps_str, RED, BLACK, 12, 0);
+    
+    // 绘制一个移动的像素点来展示动画效果
+    static uint16_t pos_x = 0;
+    static uint16_t pos_y = 80;
+  
+    
+    // 更新位置
+    pos_x = (pos_x + 3) % 128;
+    
+    // 绘制进度条
+    TFT_Fill_Area(0, 120, pos_x, 130, YELLOW);
+    
+    // LED闪烁表示程序运行
     HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-    // HAL_Delay(10); // 可以添加少量延时来控制帧率，或移除以测试最大性能
-
+    
+    // 可选：添加延时来控制帧率上限
+    // HAL_Delay(10);
+    
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

@@ -2,7 +2,7 @@
  * @file    tft.c
  * @brief   TFT绘图函数。这里的画图是以左上角为原点
  */
-#include "TFTh/TFT.h"
+#include "TFTh/TFT_CAD.h"
 #include "TFTh/TFT_io.h" // 包含底层 IO 函数
 #include <stdlib.h>		 // 用于 abs 函数
 
