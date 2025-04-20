@@ -10,8 +10,6 @@
  */
 
 #include "TFTH/font.h"
-#include "TFTh/TFT_CAD.h" // 包含绘图函数和 IO 函数
-#include <string.h>   // 包含 memcpy 和 memcmp
 
 //目前只有16*8的ASCII字库是逐行取模可以使用的
 

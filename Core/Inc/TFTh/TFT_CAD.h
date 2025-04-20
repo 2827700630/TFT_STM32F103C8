@@ -102,7 +102,7 @@ void TFT_Draw_Rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint
  */
 void TFT_Fill_Rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);
 
-/*
+/**
  * @brief  绘制四分之一圆弧 (使用 Bresenham 算法)
  * @param  centerX, centerY 圆弧所在圆的圆心坐标
  * @param  radius   圆弧半径
@@ -112,7 +112,7 @@ void TFT_Fill_Rectangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint
  */
 void TFT_Draw_Quarter_Circle(uint16_t centerX, uint16_t centerY, uint8_t radius, uint8_t cornerMask, uint16_t color);
 
-/*
+/**
  * @brief  填充实心四分之一圆弧区域 (使用水平线)
  * @param  centerX, centerY 圆弧所在圆的圆心坐标
  * @param  radius   圆弧半径

@@ -1,7 +1,6 @@
 #include "TFTh/TFT_text.h"
-#include "TFTh/TFT_CAD.h" // 包含绘图函数和 IO 函数
+#include "TFTh/TFT_io.h" // 包含绘图函数和 IO 函数
 #include "TFTh/font.h"
-#include <string.h> // 包含 memcpy 和 memcmp
 
 //----------------- 内部辅助函数 -----------------
 

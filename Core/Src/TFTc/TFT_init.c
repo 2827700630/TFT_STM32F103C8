@@ -1,11 +1,12 @@
-/*
+/**
  * @file    tft_init.c
  * @brief   TFT屏幕初始化函数，可以添加其他屏幕的初始化函数实现
  */
 #include "TFTh/TFT_init.h"
 #include <stdint.h>
 
-/*
+
+/**
  * @brief  通用 ST7735 初始化序列
  * @param  hspi 指向 SPI_HandleTypeDef 结构的指针
  * @retval 无
