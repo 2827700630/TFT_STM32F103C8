@@ -116,7 +116,7 @@ int main(void)
                   TFT_BL_GPIO_Port, TFT_BL_Pin);
   TFT_Config_Display(&htft1, 0, 0, 0);          // 设置方向、X/Y偏移
   TFT_IO_Init(&htft1);                          // 初始化IO层
-  TFT_Init_ST7789v3(&htft1);                    // ST7735S屏幕初始化
+  TFT_Init_ST7789v3(&htft1);                    // ST7789屏幕初始化
   TFT_Fill_Area(&htft1, 0, 0, 240, 320, BLACK); // 清屏为黑色背景
 
   TFT_Show_String(&htft1, 5, 25, (uint8_t *)"FPS Test Run", WHITE, BLACK, 16, 0);
