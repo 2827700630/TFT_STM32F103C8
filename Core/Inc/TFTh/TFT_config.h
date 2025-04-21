@@ -53,6 +53,11 @@
 
 #define TFT_BUFFER_SIZE 4096 // 2048 字节 (1024 像素, RGB565 格式)
 
+/**
+ * @brief 定义最大支持的 TFT 设备数量
+ */
+#define MAX_TFT_DEVICES 4 // 最大支持的TFT设备数量
+
 /*
  * 常用颜色定义 (RGB565格式)
  */

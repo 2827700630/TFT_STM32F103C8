@@ -17,8 +17,7 @@
 因此，本驱动采用较小的发送缓冲区结合 DMA (如果可用) 来优化性能。
 */
 
-// 多TFT实例设备管理
-#define MAX_TFT_DEVICES 4										   // 最大支持的TFT设备数量
+
 static TFT_HandleTypeDef *g_tft_handles[MAX_TFT_DEVICES] = {NULL}; // TFT设备句柄数组
 
 // --- 内部辅助函数声明 ---
