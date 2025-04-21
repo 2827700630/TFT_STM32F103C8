@@ -100,7 +100,7 @@ extern "C"
      * @param  res_pin: RES引脚号
      * @param  bl_port: BL引脚端口
      * @param  bl_pin: BL引脚号
-     * @retval 无
+     * @note   必须手动配置 GPIO 引脚模式和速度。否则无法显示。
      */
     void TFT_Config_Pins(TFT_HandleTypeDef *htft,
                          GPIO_TypeDef *dc_port, uint16_t dc_pin,

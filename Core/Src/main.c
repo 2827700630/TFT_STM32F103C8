@@ -87,9 +87,7 @@ void TFT_Demo_Init(void)
 {
     // 初始化第一个TFT屏幕
     TFT_Init_Instance(&htft1, &hspi1, TFT_CS_GPIO_Port, TFT_CS_Pin);
-    TFT_Config_Pins(&htft1, TFT_DC_GPIO_Port, TFT_DC_Pin,
-                    TFT_RES_GPIO_Port, TFT_RES_Pin,
-                    TFT_BL_GPIO_Port, TFT_BL_Pin);
+    TFT_Config_Pins(&htft1, TFT_DC_GPIO_Port, TFT_DC_Pin, TFT_RES_GPIO_Port, TFT_RES_Pin, TFT_BL_GPIO_Port, TFT_BL_Pin);// 必须手动设置引脚
     TFT_Config_Display(&htft1, 0, 0, 0); // 设置方向、X/Y偏移
     TFT_IO_Init(&htft1); // 初始化IO层
     TFT_Init_ST7789v3(&htft1); // ST7789屏幕初始化
