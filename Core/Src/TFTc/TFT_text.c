@@ -6,6 +6,7 @@
 
 /**
  * @brief 绘制字模数据到 TFT 屏幕 (支持列行式字库)
+ * @param htft TFT句柄指针
  * @param x          起始列坐标
  * @param y          起始行坐标
  * @param glyph_data 指向字模数据的指针 (列行式)
@@ -15,7 +16,7 @@
  * @param back_color 背景颜色
  * @param mode       模式 (0: 背景不透明, 1: 背景透明)
  */
-static void _TFT_Draw_Glyph(uint16_t x, uint16_t y, const uint8_t *glyph_data,
+static void _TFT_Draw_Glyph(TFT_HandleTypeDef *htft, uint16_t x, uint16_t y, const uint8_t *glyph_data,
                             uint8_t width, uint8_t height,
                             uint16_t color, uint16_t back_color, uint8_t mode)
 {
@@ -23,8 +24,8 @@ static void _TFT_Draw_Glyph(uint16_t x, uint16_t y, const uint8_t *glyph_data,
     uint8_t byte, bit;
     uint8_t bytes_per_column = (height + 7) / 8; // 每列字节数（8行=1, 12行=2）
 
-    TFT_Set_Address(x, y, x + width - 1, y + height - 1);
-    TFT_Reset_Buffer();
+    TFT_Set_Address(htft, x, y, x + width - 1, y + height - 1);
+    TFT_Reset_Buffer(htft);
 
     // 按列优先处理（匹配逐行式字库）
     for (col = 0; col < width; col++)
@@ -44,11 +45,11 @@ static void _TFT_Draw_Glyph(uint16_t x, uint16_t y, const uint8_t *glyph_data,
 
                 if (bit)
                 {
-                    TFT_Buffer_Write16(color); // 前景色
+                    TFT_Buffer_Write16(htft, color); // 前景色
                 }
                 else if (mode == 0)
                 {
-                    TFT_Buffer_Write16(back_color); // 背景色
+                    TFT_Buffer_Write16(htft, back_color); // 背景色
                 }
                 else
                 {
@@ -57,13 +58,14 @@ static void _TFT_Draw_Glyph(uint16_t x, uint16_t y, const uint8_t *glyph_data,
             }
         }
     }
-    TFT_Flush_Buffer(1);
+    TFT_Flush_Buffer(htft, 1);
 }
 
 //----------------- 字符/字符串显示函数 -----------------
 
 /**
  * @brief  在指定位置显示 ASCII 字符串
+ * @param  htft TFT句柄指针
  * @param  x          起始列坐标
  * @param  y          起始行坐标
  * @param  str        要显示的 ASCII 字符串
@@ -72,7 +74,7 @@ static void _TFT_Draw_Glyph(uint16_t x, uint16_t y, const uint8_t *glyph_data,
  * @param  size       字体大小 (支持 8, 12, 16)
  * @param  mode       模式 (0: 背景不透明, 1: 背景透明)
  */
-void TFT_Show_String(uint16_t x, uint16_t y, const uint8_t *str, uint16_t color, uint16_t back_color, uint8_t size, uint8_t mode)
+void TFT_Show_String(TFT_HandleTypeDef *htft, uint16_t x, uint16_t y, const uint8_t *str, uint16_t color, uint16_t back_color, uint8_t size, uint8_t mode)
 {
     uint16_t current_x = x;
     uint8_t char_width = 0;
@@ -80,7 +82,7 @@ void TFT_Show_String(uint16_t x, uint16_t y, const uint8_t *str, uint16_t color,
     while (*str) // 遍历字符串直到遇到 null 终止符
     {
         // 调用 TFT_Show_Char 显示当前 ASCII 字符
-        TFT_Show_Char(current_x, y, *str, color, back_color, size, mode);
+        TFT_Show_Char(htft, current_x, y, *str, color, back_color, size, mode);
 
         // 根据字体大小更新 X 坐标
         if (size == 16)
@@ -97,6 +99,7 @@ void TFT_Show_String(uint16_t x, uint16_t y, const uint8_t *str, uint16_t color,
 
 /**
  * @brief  在指定位置显示一个 ASCII 字符
+ * @param  htft TFT句柄指针
  * @param  x          起始列坐标
  * @param  y          起始行坐标
  * @param  chr        要显示的 ASCII 字符
@@ -105,7 +108,7 @@ void TFT_Show_String(uint16_t x, uint16_t y, const uint8_t *str, uint16_t color,
  * @param  size       字体大小 (支持 8, 12, 16)
  * @param  mode       模式 (0: 背景不透明, 1: 背景透明)
  */
-void TFT_Show_Char(uint16_t x, uint16_t y, uint8_t chr, uint16_t color, uint16_t back_color, uint8_t size, uint8_t mode)
+void TFT_Show_Char(TFT_HandleTypeDef *htft, uint16_t x, uint16_t y, uint8_t chr, uint16_t color, uint16_t back_color, uint8_t size, uint8_t mode)
 {
     const ASCIIFont *ascii_font;
     const unsigned char *glyph_data;
@@ -144,5 +147,5 @@ void TFT_Show_Char(uint16_t x, uint16_t y, uint8_t chr, uint16_t color, uint16_t
     glyph_data = ascii_font->chars + char_index * bytes_per_char; // 指向对应字模数据
 
     // 调用绘制函数
-    _TFT_Draw_Glyph(x, y, glyph_data, char_width, char_height, color, back_color, mode);
+    _TFT_Draw_Glyph(htft, x, y, glyph_data, char_width, char_height, color, back_color, mode);
 }

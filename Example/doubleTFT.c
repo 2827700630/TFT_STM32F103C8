@@ -45,6 +45,8 @@
 #define PI 3.14159265358979323846f
 
 // 定义第二个屏幕的CS引脚 (仅用于演示，应根据实际硬件配置)
+#define TFT2_CS_GPIO_Port GPIOB
+#define TFT2_CS_Pin       GPIO_PIN_0
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -87,22 +89,26 @@ void TFT_Demo_Init(void)
 {
     // 初始化第一个TFT屏幕
     TFT_Init_Instance(&htft1, &hspi1, TFT_CS_GPIO_Port, TFT_CS_Pin);
-    TFT_Config_Pins(&htft1, TFT_DC_GPIO_Port, TFT_DC_Pin, TFT_RES_GPIO_Port, TFT_RES_Pin, TFT_BL_GPIO_Port, TFT_BL_Pin);// 必须手动设置引脚
-    TFT_Config_Display(&htft1, 0, 0, 0); // 设置方向、X/Y偏移
+    TFT_Config_Pins(&htft1, TFT_DC_GPIO_Port, TFT_DC_Pin,
+                    TFT_RES_GPIO_Port, TFT_RES_Pin,
+                    TFT_BL_GPIO_Port, TFT_BL_Pin);
+    TFT_Config_Display(&htft1, 2, 2, 1); // 设置方向、X/Y偏移
     TFT_IO_Init(&htft1); // 初始化IO层
-    TFT_Init_ST7789v3(&htft1); // ST7789屏幕初始化
+    TFT_Init_ST7735S(&htft1); // ST7735S屏幕初始化
     
     // 初始化第二个TFT屏幕
     // 注: 在实际使用时，可能需要配置第二个SPI接口，或使用同一SPI但不同CS
-    TFT_Init_Instance(&htft2, &hspi2, CS2_GPIO_Port, CS2_Pin);
-    TFT_Config_Pins(&htft2, DC2_GPIO_Port, DC2_Pin,
-                    RES2_GPIO_Port, RES2_Pin,
-                    BL2_GPIO_Port, BL2_Pin);
+    TFT_Init_Instance(&htft2, &hspi2, TFT2_CS_GPIO_Port, TFT2_CS_Pin);
+    TFT_Config_Pins(&htft2, TFT_DC_GPIO_Port, TFT_DC_Pin,
+                    TFT_RES_GPIO_Port, TFT_RES_Pin,
+                    TFT_BL_GPIO_Port, TFT_BL_Pin);
     TFT_Config_Display(&htft2, 2, 2, 1); // 设置方向、X/Y偏移
     TFT_IO_Init(&htft2); // 初始化IO层
     TFT_Init_ST7735S(&htft2); // ST7735S屏幕初始化
     
     // 设置不同的缓冲区大小以测试内存管理
+    htft1.buffer_size = 4096; // 第一屏使用较大缓冲
+    htft2.buffer_size = 2048; // 第二屏使用较小缓冲
     
     // 初始化帧率计时
     lastTick = HAL_GetTick();
@@ -115,24 +121,24 @@ void TFT_Demo_Init(void)
 void TFT_Demo_Screen1(void)
 {
     // 清屏为黑色
-    TFT_Fill_Area(&htft1, 0, 0, 240, 320, BLACK);
+    TFT_Fill_Area(&htft1, 0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, BLACK);
     
     // 绘制标题
-    TFT_Show_String(&htft1, 20, 35, (uint8_t *)"Screen #1", WHITE, BLACK, 16, 0);
+    TFT_Show_String(&htft1, 20, 5, (uint8_t *)"Screen #1", WHITE, BLACK, 12, 0);
     
     // 绘制圆形边框
-    TFT_Draw_Circle(&htft1, 64, 85, 30, CYAN);
+    TFT_Draw_Circle(&htft1, 64, 45, 30, CYAN);
     
     // 绘制模拟时钟
-    TFT_Draw_Clock(&htft1, 64, 85, 25, WHITE);
+    TFT_Draw_Clock(&htft1, 64, 45, 25, WHITE);
     
     // 绘制帧率文本
     sprintf(textBuf, "FPS: %.1f", fps);
-    TFT_Show_String(&htft1, 20, 150, (uint8_t *)textBuf, GREEN, BLACK, 16, 0);
+    TFT_Show_String(&htft1, 20, 80, (uint8_t *)textBuf, GREEN, BLACK, 8, 0);
     
     // 绘制帧计数器
     sprintf(textBuf, "Frame: %lu", frameCount);
-    TFT_Show_String(&htft1, 20, 170, (uint8_t *)textBuf, GREEN, BLACK, 16, 0);
+    TFT_Show_String(&htft1, 20, 90, (uint8_t *)textBuf, GREEN, BLACK, 8, 0);
     
     // 绘制条形图数据
     uint16_t values[5] = {10 + (frameCount % 30), 20 + (frameCount % 20), 
@@ -141,7 +147,7 @@ void TFT_Demo_Screen1(void)
     uint16_t colors[5] = {RED, GREEN, BLUE, YELLOW, MAGENTA};
     
     // 绘制条形图
-    TFT_Draw_Bar_Chart(&htft1, 20, 205, 90, 40, values, 5, colors);
+    TFT_Draw_Bar_Chart(&htft1, 20, 105, 90, 40, values, 5, colors);
 }
 
 /**
@@ -151,10 +157,10 @@ void TFT_Demo_Screen1(void)
 void TFT_Demo_Screen2(void)
 {
     // 清屏为深蓝色
-    TFT_Fill_Area(&htft2, 0, 0, SCREEN_WIDTH , SCREEN_HEIGHT , BLUE);
+    TFT_Fill_Area(&htft2, 0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, BLUE);
     
     // 绘制标题
-    TFT_Show_String(&htft2, 20, 5, (uint8_t *)"Screen #2", WHITE, BLUE, 16, 0);
+    TFT_Show_String(&htft2, 20, 5, (uint8_t *)"Screen #2", WHITE, BLUE, 12, 0);
     
     // 绘制旋转动画
     TFT_Draw_Animation(&htft2, 64, 45, 30, YELLOW);
@@ -328,12 +334,12 @@ int main(void)
   
   // 显示启动画面
   TFT_Fill_Area(&htft1, 0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, BLACK);
-  TFT_Show_String(&htft1, 10, 60, (uint8_t *)"TFT Multi-Screen", WHITE, BLACK, 16, 0);
-  TFT_Show_String(&htft1, 20, 80, (uint8_t *)"Demo Starting...", GREEN, BLACK, 16, 0);
+  TFT_Show_String(&htft1, 10, 60, (uint8_t *)"TFT Multi-Screen", WHITE, BLACK, 12, 0);
+  TFT_Show_String(&htft1, 20, 80, (uint8_t *)"Demo Starting...", GREEN, BLACK, 12, 0);
   
   TFT_Fill_Area(&htft2, 0, 0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, BLUE);
-  TFT_Show_String(&htft2, 15, 60, (uint8_t *)"Screen 2 Ready", WHITE, BLUE, 16, 0);
-  TFT_Show_String(&htft2, 20, 80, (uint8_t *)"Please Wait...", YELLOW, BLUE, 16, 0);
+  TFT_Show_String(&htft2, 15, 60, (uint8_t *)"Screen 2 Ready", WHITE, BLUE, 12, 0);
+  TFT_Show_String(&htft2, 20, 80, (uint8_t *)"Please Wait...", YELLOW, BLUE, 12, 0);
   
   // 启动延时
   HAL_Delay(1000);
@@ -361,7 +367,7 @@ int main(void)
     TFT_Demo_Screen2();
     
     // 控制刷新速度
-    // HAL_Delay(10);
+    HAL_Delay(30);
     
     /* USER CODE END WHILE */
 
